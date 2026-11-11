@@ -151,36 +151,81 @@
     }
     return box;
   }
+  // ---------- lista de vendas: filtros e ordenação ----------
+  const fold = (v) => String(v || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const digits = (v) => String(v || '').replace(/\D/g, '');
+  const fmtDate = (iso) => {
+    const d = new Date(iso);
+    return isNaN(d) ? '' : d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  };
+  function matchesSearch(o, term, field) {
+    if (!term) return true;
+    const t = fold(term), td = digits(term), s = o.first;
+    const inName = () => fold(s.buyer_name).includes(t);
+    const inSeller = () => fold(s.seller).includes(t);
+    const inContact = () => fold(s.email).includes(t) || (td.length >= 3 && digits(s.phone).includes(td));
+    if (field === 'name') return inName();
+    if (field === 'seller') return inSeller();
+    if (field === 'contact') return inContact();
+    return o.nums.some(n => String(n) === term.trim()) || inName() || inSeller() || inContact() || fold(s.notes).includes(t);
+  }
+  function renderSellerFilter() {
+    const sel = $('filter-seller'), cur = sel.value;
+    const names = [...new Set(state.sales.map(s => s.seller))].sort((a, b) => a.localeCompare(b, 'pt'));
+    sel.replaceChildren(new Option('Todos', ''), ...names.map(n => new Option(n, n)));
+    sel.value = names.includes(cur) ? cur : '';
+  }
   function renderTable() {
-    const term = $('search').value.trim().toLowerCase();
-    const list = [...orders.values()]
-      .map(items => ({ items, first: items[0], nums: items.map(i => i.number) }))
-      .filter(o => !term ||
-        o.nums.some(n => String(n) === term) ||
-        [o.first.buyer_name, o.first.phone, o.first.email, o.first.seller, o.first.notes].some(v => (v || '').toLowerCase().includes(term)))
-      .sort((a, b) => a.nums[0] - b.nums[0]);
+    renderSellerFilter();
+    const term = $('search').value.trim(), field = $('search-field').value;
+    const seller = $('filter-seller').value, paid = $('filter-paid').value, sort = $('sort-by').value;
+    const all = [...orders.values()].map(items => ({
+      items, first: items[0], nums: items.map(i => i.number).sort((a, b) => a - b),
+      date: items.reduce((m, i) => (i.created_at < m ? i.created_at : m), items[0].created_at),
+      unpaid: items.filter(i => !i.paid).length,
+    }));
+    const list = all
+      .filter(o => matchesSearch(o, term, field))
+      .filter(o => !seller || o.first.seller === seller)
+      .filter(o => !paid || (paid === 'paid' ? o.unpaid === 0 : o.unpaid > 0))
+      .sort((a, b) => sort === 'number' ? a.nums[0] - b.nums[0]
+        : sort === 'date-asc' ? (a.date < b.date ? -1 : a.date > b.date ? 1 : a.nums[0] - b.nums[0])
+        : (a.date > b.date ? -1 : a.date < b.date ? 1 : a.nums[0] - b.nums[0]));
     const frag = document.createDocumentFragment();
     for (const o of list) {
       const s = o.first;
       const tr = document.createElement('tr');
       const numsTd = document.createElement('td'); numsTd.dataset.label = 'Números'; numsTd.appendChild(chips(o.nums));
       const contact = [s.phone, s.email].filter(Boolean).join(' · ');
-      const unpaid = o.items.filter(i => !i.paid).length;
       const status = document.createElement('td'); status.dataset.label = 'Estado';
-      if (!unpaid) status.textContent = 'Pago';
-      else { const p = document.createElement('span'); p.className = 'pill'; p.textContent = unpaid === o.items.length ? 'Por pagar' : `${unpaid} por pagar`; status.appendChild(p); }
+      if (!o.unpaid) status.textContent = 'Pago';
+      else { const p = document.createElement('span'); p.className = 'pill'; p.textContent = o.unpaid === o.items.length ? 'Por pagar' : `${o.unpaid} por pagar`; status.appendChild(p); }
       const qty = o.items.length + (state.price ? ' · ' + euro(o.items.length * state.price) : '');
       const act = document.createElement('td'); act.className = 'act';
       const btn = document.createElement('button'); btn.className = 'link'; btn.textContent = 'Editar';
       btn.addEventListener('click', () => openEdit(o.nums[0]));
       act.appendChild(btn);
-      tr.append(numsTd, td(s.buyer_name, '', 'Comprador'), td(contact || '—', '', 'Contacto'), td(s.seller, '', 'Vendedor'), td(qty, '', 'Qtd.'), status, act);
+      tr.append(td(fmtDate(o.date), 'date', 'Data'), numsTd, td(s.buyer_name, '', 'Comprador'), td(contact || '—', '', 'Contacto'),
+        td(s.seller, '', 'Vendedor'), td(qty, '', 'Qtd.'), status, act);
       frag.appendChild(tr);
     }
-    if (!list.length) frag.appendChild(emptyRow(term ? 'Sem resultados.' : 'Ainda sem vendas.', 7));
+    const filtered = term || seller || paid;
+    if (!list.length) frag.appendChild(emptyRow(filtered ? 'Sem resultados para estes filtros.' : 'Ainda sem vendas.', 8));
     $('sales-body').replaceChildren(frag);
+    const nT = list.reduce((a, o) => a + o.items.length, 0);
+    const rifas = `${nT} ${nT === 1 ? 'rifa' : 'rifas'}`;
+    $('list-count').textContent = filtered
+      ? `${list.length} de ${all.length} compras · ${rifas}`
+      : `${all.length} ${all.length === 1 ? 'compra' : 'compras'} · ${rifas}`;
+    $('filters-clear').classList.toggle('hidden', !filtered && sort === 'date-desc');
   }
   $('search').addEventListener('input', renderTable);
+  for (const id of ['search-field', 'filter-seller', 'filter-paid', 'sort-by']) $(id).addEventListener('change', renderTable);
+  $('filters-clear').addEventListener('click', () => {
+    $('search').value = ''; $('search-field').value = 'all'; $('filter-seller').value = ''; $('filter-paid').value = ''; $('sort-by').value = 'date-desc';
+    renderTable();
+  });
 
   // ---------- validação de contactos (telefone PT/BR/internacional e email) ----------
   function hint(id, text, kind) { const h = $(id); h.textContent = text || ''; h.dataset.kind = kind || ''; h.replaceChildren(document.createTextNode(text || '')); return h; }
@@ -618,7 +663,7 @@
   });
 
   // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
-  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-10';
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-12';
   let logoValue = '';           // '' = imagem por omissão
   function showLogo() {
     $('c-logo-preview').src = logoValue || DEFAULT_LOGO;

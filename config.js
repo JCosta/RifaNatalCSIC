@@ -8,12 +8,12 @@
 // =============================================================================
 window.RIFA_CONFIG = {
   // ex.: 'https://abcdefghijklmnop.supabase.co'
-  SUPABASE_URL: 'COLE_AQUI_O_PROJECT_URL',
+  SUPABASE_URL: 'https://ouxczbsnwwxucordnpqw.supabase.co',
 
   // "anon" / "public" key (começa normalmente por 'eyJ...' ou 'sb_publishable_...')
-  SUPABASE_ANON_KEY: 'COLE_AQUI_A_ANON_KEY',
+  SUPABASE_ANON_KEY: 'sb_publishable_RvTk0d3mu5k1URlgmUCtjg_DtOuG4L_',
 
   // Email do utilizador administrador criado em Authentication → Users.
   // O backoffice pede apenas a password (login único).
-  ADMIN_EMAIL: 'COLE_AQUI_O_EMAIL_DO_ADMIN',
+  ADMIN_EMAIL: 'jorgecostainf@gmail.com',
 };

@@ -108,5 +108,6 @@ window.RifaAPI = (() => {
     deleteSale: (number, scope = 'number') => rpc('delete_sale', { p_number: number, p_scope: scope }),
     getSettings: () => rpc('get_settings'),
     saveSettings: (data) => rpc('save_settings', { p_data: data }),
+    saveResults: (results, published) => rpc('save_results', { p_results: results, p_published: !!published }),
   };
 })();

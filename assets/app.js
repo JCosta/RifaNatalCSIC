@@ -114,6 +114,27 @@
     $('buy-card').classList.toggle('hidden', soldOut);
   }
 
+  function renderResults(d) {
+    const res = d.results || [];
+    $('results-card').classList.toggle('hidden', !res.length);
+    $('legend-win').classList.toggle('hidden', !res.length);
+    if (!res.length) return;
+    const frag = document.createDocumentFragment();
+    for (const r of res) {
+      const li = document.createElement('li');
+      const pos = document.createElement('span'); pos.className = 'r-pos'; pos.textContent = `${r.position}.º prémio`;
+      const pr = document.createElement('span'); pr.className = 'r-prize'; pr.textContent = r.prize || '';
+      const num = document.createElement('span'); num.className = 'r-num'; num.textContent = r.number;
+      li.append(pos, pr, num); frag.appendChild(li);
+    }
+    $('results').replaceChildren(frag);
+    // depois do sorteio: sem "Como comprar", e o destaque do topo passa a apontar para os resultados
+    $('buy-card').classList.add('hidden');
+    $('hero-draw').textContent = '🏆 Sorteio realizado — veja os números premiados';
+    $('hero-draw').classList.remove('hidden');
+    $('countdown').textContent = 'Sorteio realizado.';
+  }
+
   let lastKey = '';
   async function load() {
     try {
@@ -122,6 +143,7 @@
       renderInfo(d);
       lastData = d;
       renderBuy(d);
+      renderResults(d);
 
       const sold = new Set(d.sold);
       $('s-sold').textContent = sold.size;
@@ -131,15 +153,16 @@
       $('price-box').classList.toggle('hidden', !d.price);
       if (d.price) $('s-price').textContent = euro(d.price);
 
-      const key = d.total + ':' + d.sold.join(',');
+      const wins = new Set((d.results || []).map(r => r.number));
+      const key = d.total + ':' + d.sold.join(',') + ':' + [...wins].join(',');
       if (key !== lastKey) {
         lastKey = key;
         const frag = document.createDocumentFragment();
         for (let n = 1; n <= d.total; n++) {
           const el = document.createElement('div');
-          el.className = 't' + (sold.has(n) ? ' sold' : '');
+          el.className = 't' + (wins.has(n) ? ' win' : sold.has(n) ? ' sold' : '');
           el.textContent = n;
-          el.title = sold.has(n) ? `N.º ${n} — vendida` : `N.º ${n} — disponível`;
+          el.title = wins.has(n) ? `N.º ${n} — premiado` : sold.has(n) ? `N.º ${n} — vendida` : `N.º ${n} — disponível`;
           frag.appendChild(el);
         }
         grid.replaceChildren(frag);

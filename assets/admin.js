@@ -369,11 +369,63 @@
   // ---------- abas ----------
   document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
-    for (const id of ['sales-tab', 'share-tab', 'settings-tab']) $(id).classList.toggle('hidden', id !== t.dataset.tab);
+    for (const id of ['sales-tab', 'share-tab', 'draw-tab', 'settings-tab']) $(id).classList.toggle('hidden', id !== t.dataset.tab);
+    if (t.dataset.tab === 'draw-tab') loadDraw().catch(err => msg($('draw-msg'), err.message, 'err'));
     if (t.dataset.tab === 'share-tab') refreshShare();
     updateSelBar();
     if (t.dataset.tab === 'settings-tab') loadSettings().catch(err => msg($('settings-msg'), err.message, 'err'));
   }));
+
+  // ---------- sorteio ----------
+  function winnerInfo(value) {
+    const v = String(value || '').trim();
+    if (!v) return { kind: 'empty', text: '' };
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 1 || n > state.total) return { kind: 'err', text: `Número inválido (1 a ${state.total}).` };
+    const s = byNumber.get(n);
+    if (!s) return { kind: 'warn', text: 'Este número não foi vendido. Siga a regra combinada (normalmente, repetir a extração).' };
+    const contact = [s.phone, s.email].filter(Boolean).join(' · ');
+    return { kind: 'ok', text: `Vendido a ${s.buyer_name}${contact ? ' · ' + contact : ''} · vendedor: ${s.seller}${s.paid ? '' : ' · POR PAGAR'}` };
+  }
+  function renderDrawRows(prizes, results) {
+    const byPos = new Map((results || []).map(r => [r.position, r.number]));
+    const list = prizes.length ? prizes : ['', '', ''];
+    $('draw-noprizes').classList.toggle('hidden', prizes.length > 0);
+    const frag = document.createDocumentFragment();
+    list.forEach((p, i) => {
+      const row = document.createElement('div'); row.className = 'draw-row';
+      const lab = document.createElement('label'); lab.className = 'draw-prize';
+      const ord = document.createElement('strong'); ord.textContent = `${i + 1}.º prémio`;
+      lab.append(ord, document.createTextNode(p ? ' · ' + p : ''));
+      const inp = document.createElement('input'); inp.type = 'number'; inp.min = 1; inp.max = state.total; inp.inputMode = 'numeric';
+      inp.placeholder = 'N.º'; inp.dataset.pos = i + 1; inp.dataset.prize = p; inp.value = byPos.get(i + 1) ?? '';
+      lab.htmlFor = inp.id = 'draw-n' + (i + 1);
+      const info = document.createElement('div'); info.className = 'draw-info';
+      const upd = () => { const w = winnerInfo(inp.value); info.textContent = w.text; info.dataset.kind = w.kind; };
+      inp.addEventListener('input', upd); upd();
+      row.append(lab, inp, info);
+      frag.appendChild(row);
+    });
+    $('draw-rows').replaceChildren(frag);
+  }
+  async function loadDraw() {
+    hideMsg($('draw-msg'));
+    const [s] = await Promise.all([api(RifaAPI.getSettings()), load()]);
+    renderDrawRows(s.prizes || [], s.results || []);
+    $('draw-published').checked = !!s.results_published;
+  }
+  $('draw-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMsg($('draw-msg'));
+    const results = [...$('draw-rows').querySelectorAll('input')]
+      .map(i => ({ position: +i.dataset.pos, prize: i.dataset.prize, number: i.value.trim() }));
+    try {
+      const r = await api(RifaAPI.saveResults(results, $('draw-published').checked));
+      msg($('draw-msg'), r.results_published
+        ? 'Resultados publicados — já aparecem na página pública.'
+        : 'Resultados guardados (ainda não visíveis na página pública).', 'ok');
+    } catch (err) { msg($('draw-msg'), err.message, 'err'); }
+  });
 
   // ---------- partilhar ----------
   async function refreshShare() {
@@ -446,6 +498,7 @@
     const s = await api(RifaAPI.getSettings());
     $('c-org').value = s.organization || '';
     $('admin-org').textContent = s.organization || '';
+    $('c-total').value = s.total_tickets || 250;
     $('c-name').value = s.event_name || '';
     $('c-price').value = s.ticket_price || '';
     const [dd, tt] = (s.draw_date || '').split('T');
@@ -466,6 +519,7 @@
         organization: $('c-org').value,
         event_name: $('c-name').value,
         ticket_price: $('c-price').value || 0,
+        total_tickets: $('c-total').value,
         draw_date: $('c-date').value ? $('c-date').value + ($('c-time').value ? 'T' + $('c-time').value : '') : '',
         draw_location: $('c-location').value,
         purpose: $('c-purpose').value,
@@ -476,6 +530,7 @@
       renderPrizes(r.prizes.length ? r.prizes : ['']);
       renderContacts(r.contacts.length ? r.contacts : [{}]);
       $('admin-org').textContent = r.organization || '';
+      $('c-total').value = r.total_tickets;
       msg($('settings-msg'), 'Configuração guardada. A página pública já mostra os novos dados.', 'ok');
       load().catch(() => {});
     } catch (err) { msg($('settings-msg'), err.message, 'err'); }

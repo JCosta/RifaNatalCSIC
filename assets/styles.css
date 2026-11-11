@@ -70,6 +70,7 @@ h2 { font-size: 1.15rem; margin: 0 0 12px; }
 .legend > span::before { content: ""; display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
 .legend .l-free::before { background: var(--free-bg); border: 1px solid var(--free); }
 .legend .l-sold::before { background: var(--sold-bg); border: 1px solid var(--sold); }
+.legend .l-win::before { background: var(--gold); border: 1px solid var(--gold); }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(52px, 1fr)); gap: 6px; }
 .t {
@@ -155,6 +156,26 @@ td .chips { display: flex; flex-wrap: wrap; gap: 3px; max-width: 220px; }
 .contact-row .cn { flex: 3; }
 .contact-row .cp { flex: 2; }
 
+/* Sorteio (backoffice) */
+.draw-row { display: grid; grid-template-columns: minmax(180px, 1.2fr) 110px 2fr; gap: 8px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.draw-prize { color: var(--ink); font-size: .95rem; margin: 0; }
+.draw-info { font-size: .9rem; color: var(--muted); }
+.draw-info[data-kind="ok"] { color: var(--free); font-weight: 600; }
+.draw-info[data-kind="warn"] { color: #8a5a00; font-weight: 600; }
+.draw-info[data-kind="err"] { color: var(--sold); font-weight: 600; }
+.publish-check { margin: 16px 0 4px; font-weight: 700; }
+
+/* Resultados (página pública) */
+.results-card { border: 2px solid var(--gold); background: linear-gradient(180deg, #fff8e1, #fffdf6); }
+.results-card h2 { font-size: 1.35rem; }
+.results { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.results li { display: flex; align-items: center; gap: 14px; background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.results .r-pos { font-weight: 800; color: var(--sold); min-width: 74px; }
+.results .r-prize { flex: 1; font-weight: 600; }
+.results .r-num { font-size: 1.6rem; font-weight: 800; color: #fff; background: var(--gold); border-radius: 10px; min-width: 70px; text-align: center; padding: 4px 10px; font-variant-numeric: tabular-nums; }
+.results-note { margin: 12px 0 0; color: var(--muted); font-size: .92rem; }
+.t.win { background: var(--gold); border-color: var(--gold); color: #fff; text-decoration: none; opacity: 1; box-shadow: 0 0 0 3px rgba(200,150,26,.25); }
+
 /* Barra de seleção (aparece quando há números escolhidos na grelha) */
 .sel-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--free); color: #fff;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.18); }
@@ -232,6 +253,10 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 
   dialog .inner { padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }
   dialog .actions { width: 100%; }
   dialog .actions .btn { flex: 1; }
+  .draw-row { grid-template-columns: 1fr 100px; }
+  .draw-row .draw-info { grid-column: 1 / -1; }
+  .results li { flex-wrap: wrap; gap: 6px 12px; }
+  .results .r-pos { min-width: 0; }
   .contact-row { flex-wrap: wrap; }
   .contact-row .cn { flex: 1 1 100%; }
   .contact-row .cp { flex: 1; }

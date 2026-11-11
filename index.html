@@ -30,6 +30,12 @@
   </header>
 
   <div class="wrap">
+    <section class="card results-card hidden" id="results-card">
+      <h2>🏆 Números sorteados</h2>
+      <ol class="results" id="results"></ol>
+      <p class="results-note">Os vencedores são contactados pela comissão de pais. Parabéns e obrigado a todos pelo apoio!</p>
+    </section>
+
     <div class="info-grid">
       <section class="card hidden" id="purpose-card">
         <h2>🎁 Para que serve</h2>
@@ -64,7 +70,7 @@
     <section class="card">
       <div class="toolbar">
         <h2 style="margin:0">🎄 Números</h2>
-        <div class="legend"><span class="l-free">Disponível</span><span class="l-sold">Vendida</span></div>
+        <div class="legend"><span class="l-free">Disponível</span><span class="l-sold">Vendida</span><span class="l-win hidden" id="legend-win">Premiado</span></div>
         <label class="check"><input type="checkbox" id="only-free"> Mostrar só disponíveis</label>
       </div>
       <div class="grid" id="grid" aria-live="polite"></div>

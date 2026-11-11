@@ -38,6 +38,15 @@ window.RifaShare = (() => {
   function buildText(d, url) {
     const free = available(d);
     const L = [];
+    if (d.results && d.results.length) {
+      L.push(`🏆 *${d.event} — números sorteados*`);
+      if (d.organization) L.push(d.organization);
+      L.push('');
+      for (const r of d.results) L.push(`${r.position}.º prémio${r.prize ? ' (' + r.prize + ')' : ''}: *n.º ${r.number}*`);
+      L.push('', 'Os vencedores são contactados pela comissão de pais. Obrigado a todos pelo apoio! 🎄');
+      if (url) L.push('', url);
+      return L.join('\n');
+    }
     L.push(`🎄 *${d.event}*`);
     if (d.organization) L.push(d.organization);
     L.push('');

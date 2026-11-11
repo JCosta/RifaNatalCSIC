@@ -41,8 +41,24 @@
     <nav class="tabs">
       <button type="button" class="tab active" data-tab="sales-tab">Vendas</button>
       <button type="button" class="tab" data-tab="share-tab">Partilhar</button>
+      <button type="button" class="tab" data-tab="draw-tab">Sorteio</button>
       <button type="button" class="tab" data-tab="settings-tab">Configuração</button>
     </nav>
+
+    <!-- ===== Sorteio ===== -->
+    <div id="draw-tab" class="hidden">
+      <section class="card">
+        <h2>🏆 Números sorteados</h2>
+        <p class="sub" style="margin:-4px 0 12px">Escreva o número sorteado para cada prémio. Só a comissão vê a quem foi vendido; a página pública mostra apenas os números, e só depois de publicar.</p>
+        <form id="draw-form" autocomplete="off">
+          <div id="draw-rows"></div>
+          <p class="sub hidden" id="draw-noprizes" style="margin:8px 0">Ainda não há prémios configurados. Adicione-os na aba Configuração para aparecerem aqui com o nome.</p>
+          <label class="check publish-check"><input type="checkbox" id="draw-published"> Publicar os resultados na página pública</label>
+          <p class="msg" id="draw-msg"></p>
+          <div class="actions"><button class="btn" type="submit">Guardar</button></div>
+        </form>
+      </section>
+    </div>
 
     <!-- ===== Partilhar ===== -->
     <div id="share-tab" class="hidden">
@@ -75,6 +91,10 @@
         <p class="sub" style="margin-bottom:14px">Estes dados aparecem na página pública.</p>
         <form id="settings-form" autocomplete="off">
           <div style="margin-bottom:12px"><label for="c-org">Entidade organizadora</label><input id="c-org" maxlength="160"></div>
+          <div class="row">
+            <div><label for="c-total">Número de rifas (de 1 até…)</label><input id="c-total" type="number" min="1" max="10000" step="1" inputmode="numeric" required></div>
+            <div></div>
+          </div>
           <div class="row">
             <div><label for="c-name">Nome da rifa</label><input id="c-name" required maxlength="120"></div>
             <div><label for="c-price">Valor unitário de cada rifa (€)</label><input id="c-price" type="number" min="0" step="0.01" inputmode="decimal"></div>

@@ -172,7 +172,10 @@ as $$
     'how_to_buy',    coalesce(s.data ->> 'how_to_buy', ''),
     'total',         public._total_tickets(),
     'price',         nullif((s.data ->> 'ticket_price')::numeric, 0),
-    'sold',          coalesce((select jsonb_agg(number order by number) from public.sales), '[]'::jsonb)
+    'sold',          coalesce((select jsonb_agg(number order by number) from public.sales), '[]'::jsonb),
+    -- resultados do sorteio: só números (nunca nomes) e só depois de publicados
+    'results',       case when coalesce((s.data ->> 'results_published')::boolean, false)
+                          then coalesce(s.data -> 'results', '[]'::jsonb) else '[]'::jsonb end
   )
   from public.settings s where s.id = 1;
 $$;
@@ -326,6 +329,8 @@ declare
   contacts jsonb;
   c      jsonb;
   result jsonb;
+  total  int;
+  max_sold int;
 begin
   perform public._require_admin();
 
@@ -334,6 +339,16 @@ begin
   exception when others then price := -1;
   end;
   if price < 0 or price > 10000 then errs := array_append(errs, 'Preço inválido.'); end if;
+  begin
+    total := coalesce(nullif(p_data ->> 'total_tickets', ''), public._total_tickets()::text)::int;
+  exception when others then total := -1;
+  end;
+  max_sold := coalesce((select max(number) from public.sales), 0);
+  if total < 1 or total > 10000 then
+    errs := array_append(errs, 'Número de rifas inválido (entre 1 e 10000).');
+  elsif total < max_sold then
+    errs := array_append(errs, format('Não é possível reduzir para %s rifas: o n.º %s já foi vendido.', total, max_sold));
+  end if;
   if dd <> '' and dd !~ '^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$' then errs := array_append(errs, 'Data do sorteio inválida.'); end if;
 
   select coalesce(jsonb_agg(v), '[]'::jsonb) into prizes from (
@@ -360,6 +375,7 @@ begin
     'organization',  public._clean(p_data ->> 'organization', 160),
     'event_name',    coalesce(nullif(public._clean(p_data ->> 'event_name', 120), ''), 'Rifa de Natal'),
     'ticket_price',  price,
+    'total_tickets', total,
     'draw_date',     dd,
     'draw_location', public._clean(p_data ->> 'draw_location', 200),
     'purpose',       left(btrim(coalesce(p_data ->> 'purpose', '')), 2000),
@@ -370,6 +386,61 @@ begin
   update public.settings set data = result, updated_at = now() where id = 1;
   insert into public.audit_log (actor, action, details) values (auth.jwt() ->> 'email', 'configuração', left(result::text, 1000));
   return result;
+end $$;
+
+-- Resultados do sorteio: [{ position, prize, number }] + publicar ou não
+create or replace function public.save_results(p_results jsonb, p_published boolean default false)
+returns jsonb
+language plpgsql volatile security definer
+set search_path = public
+as $$
+declare
+  total int := public._total_tickets();
+  res   jsonb;
+  dup   int;
+  bad   text;
+begin
+  perform public._require_admin();
+  if jsonb_typeof(coalesce(p_results, '[]'::jsonb)) <> 'array' then
+    raise exception 'Resultados inválidos.' using errcode = '22023';
+  end if;
+
+  -- linhas sem número são ignoradas; o número tem de ser inteiro entre 1 e total
+  select string_agg(x ->> 'number', ', ') into bad
+  from jsonb_array_elements(p_results) x
+  where coalesce(x ->> 'number', '') <> ''
+    and case when (x ->> 'number') ~ '^\d+$' then (x ->> 'number')::numeric not between 1 and total else true end;
+  if bad is not null then
+    raise exception 'Número(s) sorteado(s) inválido(s): %. Use valores entre 1 e %.', bad, total using errcode = '22023';
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_object(
+           'position', pos, 'prize', prize, 'number', num) order by pos), '[]'::jsonb)
+    into res
+  from (
+    select coalesce((x ->> 'position')::int, ord::int) as pos,
+           public._clean(x ->> 'prize', 200) as prize,
+           (x ->> 'number')::int as num
+    from jsonb_array_elements(p_results) with ordinality as t(x, ord)
+    where coalesce(x ->> 'number', '') <> ''
+    limit 50
+  ) t;
+
+  select count(*) - count(distinct (e ->> 'number')) into dup from jsonb_array_elements(res) e;
+  if dup > 0 then
+    raise exception 'O mesmo número não pode ganhar dois prémios.' using errcode = '22023';
+  end if;
+  if coalesce(p_published, false) and jsonb_array_length(res) = 0 then
+    raise exception 'Indique pelo menos um número sorteado antes de publicar.' using errcode = '22023';
+  end if;
+
+  update public.settings
+     set data = data || jsonb_build_object('results', res, 'results_published', coalesce(p_published, false)),
+         updated_at = now()
+   where id = 1;
+  insert into public.audit_log (actor, action, details)
+  values (auth.jwt() ->> 'email', case when p_published then 'resultados publicados' else 'resultados guardados' end, res::text);
+  return jsonb_build_object('results', res, 'results_published', coalesce(p_published, false));
 end $$;
 
 -- ---------------------------------------------------------------------------
@@ -384,6 +455,7 @@ grant  execute on function public.update_sale(int, text, text, text, text, text,
 grant  execute on function public.delete_sale(int, text) to authenticated;
 grant  execute on function public.get_settings() to authenticated;
 grant  execute on function public.save_settings(jsonb) to authenticated;
+grant  execute on function public.save_results(jsonb, boolean) to authenticated;
 
 -- =============================================================================
 --  ADMINISTRADOR — altere o email abaixo para o email do utilizador que criou

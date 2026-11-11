@@ -551,7 +551,7 @@
   });
 
   // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
-  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-7';
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-8';
   let logoValue = '';           // '' = imagem por omissão
   function showLogo() {
     $('c-logo-preview').src = logoValue || DEFAULT_LOGO;

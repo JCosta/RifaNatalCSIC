@@ -114,6 +114,24 @@
       frag.appendChild(li);
     }
     $('contacts').replaceChildren(frag);
+    $('contacts').classList.toggle('hidden', !(d.contacts || []).length);
+    // redes sociais para pedir rifas (as mesmas do rodapé, só as de mensagem), logo abaixo dos contactos
+    const s = d.social || {};
+    const links = document.createDocumentFragment();
+    for (const k of ['facebook', 'instagram', 'email']) {
+      if (!s[k]) continue;
+      const a = document.createElement('a');
+      a.className = 'social-link';
+      a.href = k === 'email' ? 'mailto:' + s[k] + '?subject=' + encodeURIComponent('Rifas — ' + d.event) : s[k];
+      if (k !== 'email') { a.target = '_blank'; a.rel = 'noopener'; }
+      a.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="currentColor">${ICONS[k]}</svg>`;
+      const t = document.createElement('span'); t.textContent = k === 'email' ? s[k] : LABELS[k];
+      a.appendChild(t); links.appendChild(a);
+    }
+    const hasLinks = links.childNodes.length > 0;
+    $('buy-social-links').replaceChildren(links);
+    $('buy-social').classList.toggle('hidden', !hasLinks);
+    $('buy-social-lbl').textContent = (d.contacts || []).length ? 'Ou envie-nos mensagem:' : 'Envie-nos mensagem:';
     const soldOut = d.sold.length >= d.total;
     $('buy-card').classList.toggle('hidden', soldOut);
   }

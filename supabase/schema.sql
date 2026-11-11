@@ -61,7 +61,7 @@ insert into public.settings (id, data) values (1, jsonb_build_object(
   'purpose',       '',
   'prizes',        '[]'::jsonb,
   'contacts',      '[]'::jsonb,
-  'how_to_buy',    'Para comprar, contacte um elemento da comissão de pais.'
+  'how_to_buy',    'Para comprar, fale com um elemento da comissão de pais ou envie-nos mensagem pelas redes sociais.'
 )) on conflict (id) do nothing;
 
 -- ---------------------------------------------------------------------------

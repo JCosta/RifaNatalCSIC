@@ -48,7 +48,7 @@
     $('user-chip').title = me.email || '';
     $('user-avatar').textContent = (label.trim()[0] || '?').toUpperCase();
     // quem vende é, por omissão, quem está autenticado
-    if (!$('f-seller').value && me.name) $('f-seller').value = me.name;
+    setSeller();
   }
   function showApp() { $('login-view').classList.add('hidden'); $('app-view').classList.remove('hidden'); loadMe(); }
 
@@ -65,7 +65,7 @@
     } catch (err) { msg($('login-err'), err.message, 'err'); }
   });
   $('logout').addEventListener('click', async () => {
-    await RifaAPI.logout(); me = null;
+    await RifaAPI.logout(); me = null; setSeller();
     $('user-name').textContent = '…'; $('user-avatar').textContent = '?';
     showLogin();
   });
@@ -262,17 +262,21 @@
     selected.clear();
     $('sale-form').reset();
     $('f-paid').checked = true;
-    restoreSeller();
+    setSeller();
     hideMsg($('sale-msg'));
     render();
   });
-  function restoreSeller() { try { $('f-seller').value = localStorage.getItem('lastSeller') || ''; } catch (_) {} }
+  // o vendedor é sempre o utilizador autenticado (nome, ou email se não tiver nome)
+  function setSeller() { $('f-seller').value = me ? (me.name || me.email || '') : ''; }
 
   $('sale-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     hideMsg($('sale-msg'));
     const numbers = RifaAPI.parseNumbers($('f-numbers').value, state.total);
     if (!numbers) { msg($('sale-msg'), `Número(s) inválido(s). Use valores entre 1 e ${state.total} (ex.: 12, 13, 40-42).`, 'err'); return; }
+    if (!me) await loadMe();
+    setSeller();
+    if (!$('f-seller').value) { msg($('sale-msg'), 'Não foi possível identificar o utilizador autenticado. Saia e volte a entrar.', 'err'); return; }
     const body = {
       numbers,
       seller: $('f-seller').value,
@@ -284,11 +288,10 @@
     };
     try {
       const r = await api(RifaAPI.createSale(body));
-      try { localStorage.setItem('lastSeller', body.seller.trim()); } catch (_) {}
       selected.clear();
       $('sale-form').reset();
       $('f-paid').checked = true;
-      restoreSeller();
+      setSeller();
       const tot = state.price ? ` Total: ${euro(r.numbers.length * state.price)}.` : '';
       msg($('sale-msg'), `Registado${r.numbers.length > 1 ? 's' : ''} ${r.numbers.length} ${r.numbers.length === 1 ? 'número' : 'números'} para ${body.buyer_name}: ${r.numbers.join(', ')}.${tot}`, 'ok');
       await load();
@@ -570,7 +573,7 @@
 
   // ---------- arranque ----------
   (async () => {
-    restoreSeller();
+    setSeller();
     if (!RifaAPI.configured) { showLogin(); msg($('login-err'), RifaAPI.notConfiguredMessage, 'err'); }
     else if (await RifaAPI.hasSession()) { showApp(); await load().catch(() => {}); }
     else showLogin();

@@ -184,6 +184,10 @@ td .chips { display: flex; flex-wrap: wrap; gap: 3px; max-width: 220px; }
 .results-note { margin: 12px 0 0; color: var(--muted); font-size: .92rem; }
 .t.win { background: var(--gold); border-color: var(--gold); color: #fff; text-decoration: none; opacity: 1; box-shadow: 0 0 0 3px rgba(200,150,26,.25); }
 
+input.locked { background: #f6f1e7; color: var(--ink); font-weight: 700; cursor: default; }
+input.locked:focus { outline: none; }
+.hint-inline { color: var(--muted); font-size: .78rem; }
+
 /* Barra de seleção (aparece quando há números escolhidos na grelha) */
 .sel-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--free); color: #fff;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.18); }

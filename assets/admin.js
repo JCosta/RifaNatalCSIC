@@ -109,6 +109,7 @@
     }
     $('grid').replaceChildren(frag);
     updateSelBar();
+    setSeller(); // o vendedor acompanha sempre a sessão
 
     // vendedores
     const dl = document.createDocumentFragment();
@@ -267,7 +268,7 @@
     render();
   });
   // o vendedor é sempre o utilizador autenticado (nome, ou email se não tiver nome); a base de dados garante-o
-  function setSeller() { $('f-seller').value = me ? (me.name || me.email || '') : ''; }
+  function setSeller() { const v = me ? (me.name || me.email || '') : ''; if ($('f-seller').value !== v) $('f-seller').value = v; }
 
   $('sale-form').addEventListener('submit', async (e) => {
     e.preventDefault();

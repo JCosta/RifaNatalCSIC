@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Backoffice — Rifas</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="assets/styles.css">
+  <link rel="stylesheet" href="assets/styles.css?v=20261111-1">
 </head>
 <body>
   <!-- Login -->
@@ -164,7 +164,7 @@
           </div>
           <div>
             <label for="f-seller">Vendido por <span class="hint-inline">(utilizador autenticado)</span></label>
-            <input id="f-seller" readonly tabindex="-1" class="locked" title="É sempre o utilizador autenticado">
+            <input id="f-seller" readonly tabindex="-1" class="locked" autocomplete="off" name="seller-locked" title="É sempre o utilizador autenticado">
             <datalist id="sellers-list"></datalist>
           </div>
         </div>
@@ -271,9 +271,9 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script src="config.js"></script>
-  <script src="assets/api.js"></script>
-  <script src="assets/share.js"></script>
-  <script src="assets/admin.js"></script>
+  <script src="config.js?v=20261111-1"></script>
+  <script src="assets/api.js?v=20261111-1"></script>
+  <script src="assets/share.js?v=20261111-1"></script>
+  <script src="assets/admin.js?v=20261111-1"></script>
 </body>
 </html>

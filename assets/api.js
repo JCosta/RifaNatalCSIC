@@ -68,13 +68,16 @@ window.RifaAPI = (() => {
     // ---- público ----
     publicTickets: () => rpc('public_tickets'),
 
-    // ---- autenticação (login único: só a password; o email vem do config.js) ----
-    async login(password) {
+    // ---- autenticação: cada membro da comissão entra com o seu email e password ----
+    defaultEmail: filled(cfg.ADMIN_EMAIL) ? cfg.ADMIN_EMAIL.trim() : '',
+    async login(email, password) {
       if (!client) throw new ApiError(NOT_CONFIGURED);
-      if (!filled(cfg.ADMIN_EMAIL)) throw new ApiError('Falta o ADMIN_EMAIL no config.js.');
-      const { error } = await client.auth.signInWithPassword({ email: cfg.ADMIN_EMAIL.trim(), password });
+      email = String(email || '').trim();
+      if (!email) throw new ApiError('Indique o email.');
+      const { error } = await client.auth.signInWithPassword({ email, password });
       if (error) {
-        if (/invalid/i.test(error.message)) throw new ApiError('Password incorreta.');
+        if (/not confirmed/i.test(error.message)) throw new ApiError('Esta conta ainda não foi confirmada. No Supabase, confirme o utilizador (ou crie-o com "Auto Confirm User").');
+        if (/invalid/i.test(error.message)) throw new ApiError('Email ou password incorretos.');
         if (/rate|too many|seconds/i.test(error.message)) throw new ApiError('Demasiadas tentativas. Aguarde uns minutos.');
         throw toError(error);
       }
@@ -96,6 +99,7 @@ window.RifaAPI = (() => {
 
     // ---- backoffice ----
     adminData: () => rpc('admin_data'),
+    whoami: () => rpc('whoami'),
     createSale: (s) => rpc('create_sale', {
       p_numbers: s.numbers, p_buyer_name: s.buyer_name, p_seller: s.seller,
       p_phone: s.phone || '', p_email: s.email || '', p_notes: s.notes || '', p_paid: s.paid !== false,

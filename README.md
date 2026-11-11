@@ -4,7 +4,7 @@ Sistema de venda de rifas (1 a 250 por omissão, configurável) com tema natalí
 Site estático no **GitHub Pages**; dados no **Supabase** (plano gratuito).
 
 - **Página pública** (`index.html`): o link a enviar aos possíveis compradores. Mostra para que serve o sorteio, a data, os prémios, o preço, os números disponíveis/vendidos e a secção "Como comprar" com os contactos da comissão de pais. **Nunca** mostra dados de compradores.
-- **Backoffice** (`admin.html`): login único (só password).
+- **Backoffice** (`admin.html`): cada membro da comissão entra com o seu email e password; o nome de quem está autenticado aparece no canto superior direito.
   - **Vendas**: uma pessoa pode comprar vários números de uma vez (grelha, `12, 13, 40-42`, ou "Quero 5 números ao acaso/seguidos"); dados preenchidos uma só vez; compradores anteriores sugeridos. Editar/anular um número ou a compra toda. Totais por vendedor. Exportar CSV.
   - **Partilhar**: texto pronto com os números disponíveis para enviar por WhatsApp/SMS/email, e o link da página pública.
   - **Sorteio**: número sorteado para cada prémio; o backoffice mostra a quem foi vendido (ou avisa se não foi vendido). Ao publicar, a página pública mostra os números premiados — só os números, nunca nomes.
@@ -64,7 +64,8 @@ Entre em `admin.html` com a password → **Configuração**: preço, prémios, f
 | Tarefa | Como |
 |---|---|
 | Mudar a password do backoffice | Supabase → Authentication → Users → ⋯ → *Reset password* / editar utilizador |
-| Mais um administrador com email próprio | Criar o utilizador e `insert into public.admins ...`; nesse caso o `ADMIN_EMAIL` do `config.js` continua a ser o do login único |
+| Mais um administrador | Authentication → Users → *Add user* (com **Auto Confirm User**) e `insert into public.admins (email, name) values ('email', 'Nome');` — entra logo com o seu email e password |
+| Mudar o nome mostrado no backoffice | `update public.admins set name = 'Nome' where email = 'email';` |
 | Mudar o número de rifas | Backoffice → Configuração (não deixa baixar abaixo do maior número já vendido) |
 | Atualizar o código da base de dados | Supabase → SQL Editor → colar de novo `supabase/schema.sql` → Run (não apaga dados) |
 | Cópia de segurança | Backoffice → **Exportar CSV** |

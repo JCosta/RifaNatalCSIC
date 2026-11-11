@@ -13,7 +13,7 @@ window.RIFA_CONFIG = {
   // "anon" / "public" key (começa normalmente por 'eyJ...' ou 'sb_publishable_...')
   SUPABASE_ANON_KEY: 'sb_publishable_RvTk0d3mu5k1URlgmUCtjg_DtOuG4L_',
 
-  // Email do utilizador administrador criado em Authentication → Users.
-  // O backoffice pede apenas a password (login único).
+  // Email sugerido no ecrã de login do backoffice (opcional).
+  // Cada membro da comissão entra com o seu email e password (Authentication → Users + tabela admins).
   ADMIN_EMAIL: 'jorgecostainf@gmail.com',
 };

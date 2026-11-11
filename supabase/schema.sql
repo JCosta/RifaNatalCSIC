@@ -17,6 +17,8 @@
 create table if not exists public.admins (
   email text primary key
 );
+-- nome a mostrar no backoffice (opcional; sem nome mostra o email)
+alter table public.admins add column if not exists name text;
 
 create table if not exists public.settings (
   id          int primary key default 1 check (id = 1),
@@ -306,6 +308,19 @@ begin
   return jsonb_build_object('ok', true, 'numbers', to_jsonb(nums));
 end $$;
 
+-- Quem está autenticado (para mostrar no backoffice)
+create or replace function public.whoami()
+returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+declare a public.admins;
+begin
+  perform public._require_admin();
+  select * into a from public.admins where lower(email) = lower(auth.jwt() ->> 'email');
+  return jsonb_build_object('email', a.email, 'name', nullif(btrim(coalesce(a.name, '')), ''));
+end $$;
+
 create or replace function public.get_settings()
 returns jsonb
 language plpgsql stable security definer
@@ -454,6 +469,7 @@ grant  execute on function public.create_sale(int[], text, text, text, text, tex
 grant  execute on function public.update_sale(int, text, text, text, text, text, boolean, boolean) to authenticated;
 grant  execute on function public.delete_sale(int, text) to authenticated;
 grant  execute on function public.get_settings() to authenticated;
+grant  execute on function public.whoami() to authenticated;
 grant  execute on function public.save_settings(jsonb) to authenticated;
 grant  execute on function public.save_results(jsonb, boolean) to authenticated;
 
@@ -461,4 +477,8 @@ grant  execute on function public.save_results(jsonb, boolean) to authenticated;
 --  ADMINISTRADOR — altere o email abaixo para o email do utilizador que criou
 --  em Authentication → Users, e corra também esta linha.
 -- =============================================================================
--- insert into public.admins (email) values ('rifas@exemplo.pt') on conflict do nothing;
+-- insert into public.admins (email, name) values ('rifas@exemplo.pt', 'Nome a mostrar') on conflict do nothing;
+--
+-- Mais administradores: crie cada utilizador em Authentication → Users (com "Auto Confirm User")
+-- e acrescente o email aqui. Para dar/mudar o nome mostrado no backoffice:
+-- update public.admins set name = 'Maria' where email = 'maria@exemplo.pt';

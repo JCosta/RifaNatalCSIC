@@ -45,6 +45,12 @@ footer p { margin: 0; }
 .admin-hero h1 { font-family: "Mountains of Christmas", "Nunito", serif; font-size: 2rem; margin: 0; }
 .admin-hero a { color: #f3d27a; }
 .admin-hero .btn.secondary { background: rgba(255,255,255,.16); color: #fff; }
+.admin-right { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; justify-content: flex-end; }
+.user-chip { display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,.12); border: 1px solid rgba(243,210,122,.45); border-radius: 999px; padding: 5px 14px 5px 5px; max-width: 280px; }
+.user-chip .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--gold); color: #fff; font-weight: 800; display: flex; align-items: center; justify-content: center; flex: none; }
+.user-chip .who { display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
+.user-chip .lbl { font-size: .7rem; color: #f3d27a; text-transform: uppercase; letter-spacing: .08em; font-weight: 700; }
+.user-chip strong { font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 * { box-sizing: border-box; }
 body { margin: 0; }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
@@ -222,12 +228,16 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 
   .legend { gap: 12px; font-size: .82rem; width: 100%; }
   .hint { display: none; }
   .row { grid-template-columns: 1fr; gap: 10px; }
-  .tabs .tab { flex: 1; }
+  .tabs { overflow-x: auto; scrollbar-width: none; gap: 0; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tabs .tab { flex: 1 0 auto; padding: 10px 10px; font-size: .92rem; white-space: nowrap; }
   #search { max-width: none !important; }
 
   /* cabeçalho do backoffice */
   .admin-hero .wrap { padding-top: 14px; padding-bottom: 14px; }
   .admin-hero h1 { font-size: 1.6rem; }
+  .admin-right { width: 100%; justify-content: stretch; }
+  .user-chip { max-width: none; width: 100%; }
   .admin-hero .actions { width: 100%; }
   .admin-hero .actions .btn { flex: 1; text-align: center; }
 

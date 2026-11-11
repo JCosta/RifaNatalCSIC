@@ -31,20 +31,44 @@
   function emptyRow(text, cols) { const tr = document.createElement('tr'); const c = td(text, 'empty'); c.colSpan = cols; tr.append(c); return tr; }
 
   // ---------- auth ----------
-  function showLogin() { $('app-view').classList.add('hidden'); updateSelBar(); $('login-view').classList.remove('hidden'); $('password').focus(); }
-  function showApp() { $('login-view').classList.add('hidden'); $('app-view').classList.remove('hidden'); }
+  function showLogin() {
+    $('app-view').classList.add('hidden'); updateSelBar(); $('login-view').classList.remove('hidden');
+    if (!$('login-email').value) {
+      let last = ''; try { last = localStorage.getItem('lastLoginEmail') || ''; } catch (_) {}
+      $('login-email').value = last || RifaAPI.defaultEmail;
+    }
+    ($('login-email').value ? $('password') : $('login-email')).focus();
+  }
+  // nome (ou email) de quem está autenticado, no canto superior direito
+  let me = null;
+  async function loadMe() {
+    try { me = await RifaAPI.whoami(); } catch (_) { return; }
+    const label = me.name || me.email || '';
+    $('user-name').textContent = label;
+    $('user-chip').title = me.email || '';
+    $('user-avatar').textContent = (label.trim()[0] || '?').toUpperCase();
+    // quem vende é, por omissão, quem está autenticado
+    if (!$('f-seller').value && me.name) $('f-seller').value = me.name;
+  }
+  function showApp() { $('login-view').classList.add('hidden'); $('app-view').classList.remove('hidden'); loadMe(); }
 
   $('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     hideMsg($('login-err'));
     try {
-      await RifaAPI.login($('password').value);
+      const email = $('login-email').value.trim();
+      await RifaAPI.login(email, $('password').value);
+      try { localStorage.setItem('lastLoginEmail', email); } catch (_) {}
       $('password').value = '';
       showApp();
       await load();
     } catch (err) { msg($('login-err'), err.message, 'err'); }
   });
-  $('logout').addEventListener('click', async () => { await RifaAPI.logout(); showLogin(); });
+  $('logout').addEventListener('click', async () => {
+    await RifaAPI.logout(); me = null;
+    $('user-name').textContent = '…'; $('user-avatar').textContent = '?';
+    showLogin();
+  });
 
   // ---------- data ----------
   async function load() {

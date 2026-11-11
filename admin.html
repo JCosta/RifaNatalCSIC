@@ -14,6 +14,8 @@
     <form class="card login" id="login-form">
       <h2>🎄 Backoffice da Rifa de Natal</h2>
       <p class="sub" style="margin:-4px 0 14px">Associação de Pais do Centro Social da Imaculada Conceição</p>
+      <label for="login-email">Email</label>
+      <input type="email" id="login-email" autocomplete="username" required style="margin-bottom:10px">
       <label for="password">Password</label>
       <input type="password" id="password" autocomplete="current-password" required>
       <p class="msg err" id="login-err"></p>
@@ -30,9 +32,15 @@
           <p class="admin-org" id="admin-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
           <a href="./" target="_blank">ver página pública ↗</a>
         </div>
-        <div class="actions">
-          <button type="button" class="btn secondary" id="export-csv">Exportar CSV</button>
-          <button class="btn secondary" id="logout">Sair</button>
+        <div class="admin-right">
+          <div class="user-chip" id="user-chip" title="">
+            <span class="avatar" id="user-avatar">?</span>
+            <span class="who"><span class="lbl">Sessão iniciada</span><strong id="user-name">…</strong></span>
+          </div>
+          <div class="actions">
+            <button type="button" class="btn secondary" id="export-csv">Exportar CSV</button>
+            <button class="btn secondary" id="logout">Sair</button>
+          </div>
         </div>
       </div>
     </header>

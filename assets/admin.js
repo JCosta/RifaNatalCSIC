@@ -11,18 +11,12 @@
   let orders = new Map(); // order_id -> [vendas]
 
   // ---------- helpers ----------
-  async function api(method, url, body) {
-    const r = await fetch(url, {
-      method,
-      headers: body ? { 'Content-Type': 'application/json' } : {},
-      body: body ? JSON.stringify(body) : undefined,
-      credentials: 'same-origin',
-    });
-    const data = await r.json().catch(() => ({}));
-    if (r.status === 401 && !url.includes('/auth/')) { showLogin(); throw new Error(data.error || 'Sessão expirada.'); }
-    if (!r.ok) throw new Error(data.error || 'Erro inesperado.');
-    return data;
+  // Executa uma chamada ao Supabase; se a sessão expirou, volta ao ecrã de login
+  async function api(promise) {
+    try { return await promise; }
+    catch (e) { if (e.auth) showLogin(); throw e; }
   }
+  const publicUrl = () => new URL('./', location.href).href;
   function msg(el, text, kind) {
     el.textContent = text;
     el.className = 'msg show ' + kind;
@@ -44,18 +38,18 @@
     e.preventDefault();
     hideMsg($('login-err'));
     try {
-      await api('POST', '/api/auth/login', { password: $('password').value });
+      await RifaAPI.login($('password').value);
       $('password').value = '';
       showApp();
       await load();
     } catch (err) { msg($('login-err'), err.message, 'err'); }
   });
-  $('logout').addEventListener('click', async () => { await api('POST', '/api/auth/logout').catch(() => {}); showLogin(); });
+  $('logout').addEventListener('click', async () => { await RifaAPI.logout(); showLogin(); });
 
   // ---------- data ----------
   async function load() {
-    api('GET', '/api/admin/settings').then(r => { $('admin-org').textContent = r.settings.organization || ''; }).catch(() => {});
-    state = await api('GET', '/api/admin/sales');
+    RifaAPI.getSettings().then(s => { $('admin-org').textContent = (s && s.organization) || ''; }).catch(() => {});
+    state = await api(RifaAPI.adminData());
     byNumber = new Map(state.sales.map(s => [s.number, s]));
     orders = new Map();
     for (const s of state.sales) {
@@ -253,8 +247,10 @@
   $('sale-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     hideMsg($('sale-msg'));
+    const numbers = RifaAPI.parseNumbers($('f-numbers').value, state.total);
+    if (!numbers) { msg($('sale-msg'), `Número(s) inválido(s). Use valores entre 1 e ${state.total} (ex.: 12, 13, 40-42).`, 'err'); return; }
     const body = {
-      numbers: $('f-numbers').value,
+      numbers,
       seller: $('f-seller').value,
       buyer_name: $('f-name').value,
       phone: $('f-phone').value,
@@ -263,7 +259,7 @@
       paid: $('f-paid').checked,
     };
     try {
-      const r = await api('POST', '/api/admin/sales', body);
+      const r = await api(RifaAPI.createSale(body));
       try { localStorage.setItem('lastSeller', body.seller.trim()); } catch (_) {}
       selected.clear();
       $('sale-form').reset();
@@ -312,11 +308,10 @@
   $('e-cancel').addEventListener('click', () => dlg.close());
   $('e-save').addEventListener('click', async () => {
     try {
-      await api('PUT', '/api/admin/sales/' + editing, {
+      await api(RifaAPI.updateSale(editing, {
         buyer_name: $('e-name').value, seller: $('e-seller').value, phone: $('e-phone').value,
         email: $('e-email').value, notes: $('e-notes').value, paid: $('e-paid').checked,
-        apply_to_order: $('e-order').classList.contains('hidden') ? true : $('e-apply-all').checked,
-      });
+      }, $('e-order').classList.contains('hidden') ? true : $('e-apply-all').checked));
       dlg.close();
       await load();
     } catch (err) { msg($('edit-err'), err.message, 'err'); }
@@ -328,7 +323,7 @@
       return;
     }
     try {
-      await api('DELETE', '/api/admin/sales/' + editing);
+      await api(RifaAPI.deleteSale(editing, 'number'));
       dlg.close();
       await load();
     } catch (err) { msg($('edit-err'), err.message, 'err'); }
@@ -341,10 +336,34 @@
       return;
     }
     try {
-      await api('DELETE', '/api/admin/sales/' + editing + '?scope=order');
+      await api(RifaAPI.deleteSale(editing, 'order'));
       dlg.close();
       await load();
     } catch (err) { msg($('edit-err'), err.message, 'err'); }
+  });
+
+  // ---------- exportar CSV (gerado no browser) ----------
+  function csvCell(v) {
+    let s = String(v ?? '');
+    if (/^[=+\-@\t\r]/.test(s)) s = "'" + s; // evita injeção de fórmulas no Excel
+    return `"${s.replace(/"/g, '""')}"`;
+  }
+  $('export-csv').addEventListener('click', async () => {
+    try {
+      const d = await api(RifaAPI.adminData());
+      const header = ['Número', 'Compra', 'Nome', 'Telefone', 'Email', 'Vendedor', 'Pago', 'Notas', 'Data'];
+      const lines = [header.map(csvCell).join(';')];
+      for (const r of d.sales) {
+        lines.push([r.number, r.order_id, r.buyer_name, r.phone, r.email, r.seller, r.paid ? 'Sim' : 'Não', r.notes,
+          new Date(r.created_at).toLocaleString('pt-PT')].map(csvCell).join(';'));
+      }
+      const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'rifas-vendidas.csv';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    } catch (e) { alert(e.message); }
   });
 
   // ---------- abas ----------
@@ -358,10 +377,9 @@
 
   // ---------- partilhar ----------
   async function refreshShare() {
-    $('public-link').value = location.origin + '/';
-    const r = await fetch('/api/public/tickets', { cache: 'no-store' });
-    const d = await r.json();
-    $('share-text').value = RifaShare.buildText(d, location.origin + '/');
+    $('public-link').value = publicUrl();
+    const d = await RifaAPI.publicTickets();
+    $('share-text').value = RifaShare.buildText(d, publicUrl());
   }
   const shareNotice = (t) => { msg($('share-msg'), t, 'ok'); setTimeout(() => hideMsg($('share-msg')), 4000); };
   RifaShare.wire($('share-tab'), () => $('share-text').value, shareNotice);
@@ -425,7 +443,7 @@
 
   async function loadSettings() {
     hideMsg($('settings-msg'));
-    const { settings: s } = await api('GET', '/api/admin/settings');
+    const s = await api(RifaAPI.getSettings());
     $('c-org').value = s.organization || '';
     $('admin-org').textContent = s.organization || '';
     $('c-name').value = s.event_name || '';
@@ -444,7 +462,7 @@
     e.preventDefault();
     hideMsg($('settings-msg'));
     try {
-      const r = await api('PUT', '/api/admin/settings', {
+      const r = await api(RifaAPI.saveSettings({
         organization: $('c-org').value,
         event_name: $('c-name').value,
         ticket_price: $('c-price').value || 0,
@@ -454,10 +472,10 @@
         prizes: prizeInputs().map(x => x.value),
         contacts: contactRows(),
         how_to_buy: $('c-howto').value,
-      });
-      renderPrizes(r.settings.prizes.length ? r.settings.prizes : ['']);
-      renderContacts(r.settings.contacts.length ? r.settings.contacts : [{}]);
-      $('admin-org').textContent = r.settings.organization || '';
+      }));
+      renderPrizes(r.prizes.length ? r.prizes : ['']);
+      renderContacts(r.contacts.length ? r.contacts : [{}]);
+      $('admin-org').textContent = r.organization || '';
       msg($('settings-msg'), 'Configuração guardada. A página pública já mostra os novos dados.', 'ok');
       load().catch(() => {});
     } catch (err) { msg($('settings-msg'), err.message, 'err'); }
@@ -466,8 +484,9 @@
   // ---------- arranque ----------
   (async () => {
     restoreSeller();
-    const me = await api('GET', '/api/auth/me').catch(() => ({ authenticated: false }));
-    if (me.authenticated) { showApp(); await load().catch(() => {}); } else showLogin();
+    if (!RifaAPI.configured) { showLogin(); msg($('login-err'), RifaAPI.notConfiguredMessage, 'err'); }
+    else if (await RifaAPI.hasSession()) { showApp(); await load().catch(() => {}); }
+    else showLogin();
     setInterval(() => { if (!document.hidden && !dlg.open && !$('app-view').classList.contains('hidden')) load().catch(() => {}); }, 30000);
   })();
 })();

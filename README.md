@@ -1,83 +1,84 @@
 # 🎄 Rifa de Natal — Associação de Pais do Centro Social da Imaculada Conceição
 
-Sistema simples de venda de rifas (1 a 250), com tema natalício e design responsivo (telemóvel, tablet e computador).
+Sistema de venda de rifas (1 a 250) com tema natalício e design responsivo.
+Site estático no **GitHub Pages**; dados no **Supabase** (plano gratuito).
 
-- **Página pública** (`/`) — é o link a enviar aos possíveis compradores. Mostra para que serve o sorteio, a data (com contagem decrescente), os prémios, o preço e que números estão disponíveis ou vendidos. Tem a secção "Como comprar" com os contactos da comissão (telefone e WhatsApp) e botões para partilhar a lista. Nenhum dado de compradores é enviado para esta página. Atualiza sozinha a cada 30 s.
-- **Backoffice** (`/admin`) — protegido por **uma única password partilhada**. Permite:
-  - registar vendas (nome, telefone, email, quem vendeu, notas, pago/por pagar). **Uma pessoa pode comprar vários números numa só operação** — escolhendo-os na grelha, escrevendo-os (`12, 13, 40-42`) ou pedindo "Quero 5 números ao acaso / seguidos". Os dados são preenchidos uma vez e ficam agrupados numa *compra*; compradores anteriores são sugeridos e os contactos preenchidos automaticamente;
-  - a lista de vendas mostra uma linha por compra, com todos os números e o total;
-  - editar ou anular uma venda (clique num número vendido) — a alteração aplica-se à compra toda ou só a esse número; também é possível anular a compra inteira;
-  - pesquisar, ver totais por vendedor e exportar tudo para CSV (abre no Excel);
-  - **Partilhar**: texto pronto com os números disponíveis (em intervalos, ex.: `4 a 7`), prémios, data e contactos da comissão — botões *Enviar por WhatsApp*, *Partilhar* e *Copiar*; e o link da página pública. Só contém informação pública.
-  - **Configuração**: entidade organizadora, nome da rifa, valor unitário, data/hora e local do sorteio, fim a que se destina e lista de prémios (ordenável), contactos da comissão de pais e mensagem "Como comprar". Fica guardado na base de dados.
-- O mesmo número nunca pode ser vendido duas vezes (garantido pela base de dados).
+- **Página pública** (`index.html`): o link a enviar aos possíveis compradores. Mostra para que serve o sorteio, a data, os prémios, o preço, os números disponíveis/vendidos e a secção "Como comprar" com os contactos da comissão de pais. **Nunca** mostra dados de compradores.
+- **Backoffice** (`admin.html`): login único (só password).
+  - **Vendas**: uma pessoa pode comprar vários números de uma vez (grelha, `12, 13, 40-42`, ou "Quero 5 números ao acaso/seguidos"); dados preenchidos uma só vez; compradores anteriores sugeridos. Editar/anular um número ou a compra toda. Totais por vendedor. Exportar CSV.
+  - **Partilhar**: texto pronto com os números disponíveis para enviar por WhatsApp/SMS/email, e o link da página pública.
+  - **Configuração**: entidade, nome da rifa, preço, data/hora/local do sorteio, finalidade, prémios, contactos da comissão.
 
-Stack: Node.js 22 + Express + SQLite (módulo `node:sqlite` nativo, sem serviços externos). A base de dados é um único ficheiro (`data/rifas.db`).
+---
 
-## Correr localmente
+## Configuração (≈ 15 minutos, uma única vez)
 
-```bash
-cp .env.example .env      # e mude ADMIN_PASSWORD e SESSION_SECRET
-npm install
-npm start                 # http://localhost:3000  e  http://localhost:3000/admin
+### 1. Criar o projeto no Supabase
+1. Crie uma conta em <https://supabase.com> e clique em **New project**.
+2. Nome: `rifa-natal`; **Region**: uma da Europa (ex.: *West EU (Ireland)* ou *Central EU (Frankfurt)*); defina uma password da base de dados (guarde-a, mas não é usada no site).
+
+### 2. Criar a base de dados e o administrador
+1. No projeto: **SQL Editor → New query** → cole todo o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
+2. **Authentication → Users → Add user → Create new user**: email (ex.: `rifas.csic@gmail.com`) e a password que a comissão vai usar no backoffice. Marque **Auto Confirm User**.
+3. Volte ao **SQL Editor** e corra (com o email do passo anterior):
+   ```sql
+   insert into public.admins (email) values ('rifas.csic@gmail.com');
+   ```
+4. **Authentication → Sign In / Providers** (ou *Settings*): desative **Allow new users to sign up**.
+   (Mesmo que fique ativo, contas novas não têm acesso — só os emails na tabela `admins` —, mas é mais limpo.)
+
+### 3. Ligar o site ao Supabase
+1. No Supabase: **Project Settings → API** (ou *Data API* / *API Keys*). Copie:
+   - **Project URL** (ex.: `https://abcdefgh.supabase.co`)
+   - **anon / public key** (ou *publishable key*). **Não** use a `service_role` / *secret key*.
+2. No GitHub, abra [`config.js`](config.js) → ✏️ editar → cole os dois valores e o email do administrador → **Commit changes**.
+
+### 4. Publicar no GitHub Pages
+1. No repositório: **Settings → Pages**.
+2. **Source**: *Deploy from a branch* → Branch: `main` / `(root)` → **Save**.
+3. Após 1–2 minutos o site fica em:
+   - Página pública: `https://<utilizador>.github.io/RifaNatalCSIC/`
+   - Backoffice: `https://<utilizador>.github.io/RifaNatalCSIC/admin.html`
+
+> **Repositório privado?** No plano gratuito do GitHub, o Pages só funciona com repositórios **públicos**. Pode tornar o repositório público em *Settings → General → Danger Zone → Change visibility*: não há nada secreto no código (a *anon key* é pública por natureza; os dados estão protegidos pelas regras da base de dados).
+
+### 5. Primeiros passos no backoffice
+Entre em `admin.html` com a password → **Configuração**: preço, prémios, finalidade, contactos da comissão → **Guardar**. Está pronto a vender.
+
+---
+
+## Segurança e privacidade
+
+- Toda a lógica corre em funções SQL no Supabase (`supabase/schema.sql`), com **Row Level Security** em todas as tabelas.
+- Visitantes só conseguem chamar `public_tickets()` (números vendidos + informação da rifa). Ler ou escrever diretamente nas tabelas é recusado.
+- Só os emails em `public.admins` acedem ao backoffice; contas sem essa permissão são recusadas mesmo que consigam autenticar-se.
+- Todas as vendas, edições e anulações ficam registadas em `audit_log` (com o email de quem fez).
+- **RGPD**: os contactos dos compradores só devem ser usados para a rifa. Depois do sorteio, exporte o CSV que for preciso e apague os dados no SQL Editor:
+  ```sql
+  delete from public.sales; delete from public.audit_log;
+  ```
+
+## Manutenção
+
+| Tarefa | Como |
+|---|---|
+| Mudar a password do backoffice | Supabase → Authentication → Users → ⋯ → *Reset password* / editar utilizador |
+| Mais um administrador com email próprio | Criar o utilizador e `insert into public.admins ...`; nesse caso o `ADMIN_EMAIL` do `config.js` continua a ser o do login único |
+| Mudar o número de rifas (ex.: 300) | `update public.settings set data = jsonb_set(data, '{total_tickets}', '300') where id = 1;` |
+| Cópia de segurança | Backoffice → **Exportar CSV** |
+| Projeto Supabase "pausado" | Projetos gratuitos sem atividade durante 7 dias são pausados; com o site a ser visitado isso não acontece. Se acontecer: Supabase → projeto → **Restore**. |
+
+## Estrutura
+
 ```
-
-Requer Node.js 22.13 ou superior.
-
-## Correr com Docker
-
-```bash
-cp .env.example .env      # preencher
-docker compose up -d --build
+index.html            página pública
+admin.html            backoffice
+config.js             ligação ao Supabase (editar no passo 3)
+assets/
+  api.js              chamadas ao Supabase (RPC)
+  app.js              lógica da página pública
+  admin.js            lógica do backoffice
+  share.js            texto "números disponíveis" para WhatsApp/SMS
+  styles.css          tema natalício + responsivo
+supabase/schema.sql   tabelas, regras de segurança e funções
 ```
-
-A base de dados fica em `./data/rifas.db` no anfitrião — **faça backup desta pasta**.
-
-## Pôr online
-
-Qualquer serviço que faça deploy a partir de um repositório git com Dockerfile serve (Render, Railway, Fly.io, Coolify, um servidor próprio…). Pontos importantes:
-
-1. **Disco persistente**: monte um volume em `/app/data`. Sem isso, as vendas perdem-se quando o serviço reinicia (os planos gratuitos de alguns serviços não têm disco persistente).
-2. **HTTPS obrigatório**: há dados pessoais (RGPD). Os serviços acima dão HTTPS automaticamente; num servidor próprio use um proxy (Caddy, Nginx, Traefik, Cloudflare Tunnel).
-3. **Variáveis de ambiente**: defina `ADMIN_PASSWORD` e `SESSION_SECRET` no painel do serviço — nunca faça commit do `.env` (já está no `.gitignore`).
-
-## Configuração (`.env`)
-
-| Variável | Descrição | Por omissão |
-|---|---|---|
-| `ADMIN_PASSWORD` | Password do backoffice (obrigatória, ≥ 8 caracteres) | — |
-| `SESSION_SECRET` | Segredo das sessões (`openssl rand -hex 32`) | aleatório a cada arranque |
-| `ORGANIZATION` | Entidade organizadora* | Associação de Pais do Centro Social da Imaculada Conceição |
-| `EVENT_NAME` | Nome inicial da rifa* | Rifa de Natal |
-| `EVENT_INFO` | Finalidade inicial* | vazio |
-| `DRAW_DATE` | Data inicial do sorteio* (`AAAA-MM-DD` ou `AAAA-MM-DDTHH:MM`) | 2026-12-07 |
-| `TOTAL_TICKETS` | Quantidade de números | 250 |
-| `TICKET_PRICE` | Preço inicial por rifa em €* | 0 |
-| `PORT` | Porta | 3000 |
-| `SESSION_HOURS` | Duração da sessão | 12 |
-| `COOKIE_SECURE` | `auto` / `true` / `false` | auto |
-| `DB_PATH` | Caminho da base de dados | `./data/rifas.db` |
-
-\* Só usados até se gravar a Configuração no backoffice; a partir daí manda o que está na base de dados.
-
-## API
-
-Pública:
-- `GET /api/public/tickets` → `{ event, purpose, draw_date, draw_location, prizes, total, price, sold: [números] }`
-
-Autenticação:
-- `POST /api/auth/login` `{ password }` · `POST /api/auth/logout` · `GET /api/auth/me`
-
-Backoffice (requer sessão):
-- `GET /api/admin/sales` — vendas e totais por vendedor
-- `POST /api/admin/sales` — `{ numbers: "5, 7, 10-12", buyer_name, phone, email, seller, notes, paid }` (telefone **ou** email obrigatório)
-- `PUT /api/admin/sales/:number` — editar (`apply_to_order: true` por omissão, aplica a todos os números da mesma compra)
-- `DELETE /api/admin/sales/:number` — anular esse número (`?scope=order` anula a compra toda)
-- `GET /api/admin/export.csv` — exportação (separador `;`, compatível com Excel PT)
-- `GET /api/admin/settings` · `PUT /api/admin/settings` — `{ event_name, ticket_price, draw_date: "AAAA-MM-DDTHH:MM", draw_location, purpose, prizes: [..] }`
-
-Todas as vendas, edições e anulações ficam registadas na tabela `audit_log`.
-
-## Privacidade (RGPD)
-
-Os contactos dos compradores só devem ser usados para a rifa (ex.: avisar o vencedor). Depois do sorteio, exporte o que for preciso e apague a base de dados (`data/rifas.db`).

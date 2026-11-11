@@ -84,8 +84,9 @@
     $('prizes').replaceChildren(frag);
   }
 
+  const publicUrl = () => location.href.split('#')[0].split('?')[0].replace(/index\.html$/, '');
   let lastData = null;
-  RifaShare.wire(document, () => lastData && RifaShare.buildText(lastData, location.origin + '/'), (t) => {
+  RifaShare.wire(document, () => lastData && RifaShare.buildText(lastData, publicUrl()), (t) => {
     $('share-msg').textContent = t; $('share-msg').classList.add('show');
     setTimeout(() => $('share-msg').classList.remove('show'), 4000);
   });
@@ -116,9 +117,7 @@
   let lastKey = '';
   async function load() {
     try {
-      const r = await fetch('/api/public/tickets', { cache: 'no-store' });
-      if (!r.ok) throw new Error();
-      const d = await r.json();
+      const d = await RifaAPI.publicTickets();
       $('err').classList.remove('show');
       renderInfo(d);
       lastData = d;
@@ -146,8 +145,8 @@
         grid.replaceChildren(frag);
       }
       $('updated').textContent = new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
-    } catch (_) {
-      $('err').textContent = 'Não foi possível carregar as rifas. A tentar novamente…';
+    } catch (e) {
+      $('err').textContent = RifaAPI.configured ? 'Não foi possível carregar as rifas. A tentar novamente…' : RifaAPI.notConfiguredMessage;
       $('err').classList.add('show');
     }
   }

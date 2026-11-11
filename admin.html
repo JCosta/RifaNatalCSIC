@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Backoffice — Rifas</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="assets/styles.css">
 </head>
 <body>
   <!-- Login -->
@@ -28,10 +28,10 @@
         <div>
           <h1>🎄 Backoffice da Rifa</h1>
           <p class="admin-org" id="admin-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
-          <a href="/" target="_blank">ver página pública ↗</a>
+          <a href="./" target="_blank">ver página pública ↗</a>
         </div>
         <div class="actions">
-          <a class="btn secondary" href="/api/admin/export.csv">Exportar CSV</a>
+          <button type="button" class="btn secondary" id="export-csv">Exportar CSV</button>
           <button class="btn secondary" id="logout">Sair</button>
         </div>
       </div>
@@ -242,7 +242,10 @@
     </form>
   </dialog>
 
-  <script src="/share.js"></script>
-  <script src="/admin.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="assets/api.js"></script>
+  <script src="assets/share.js"></script>
+  <script src="assets/admin.js"></script>
 </body>
 </html>

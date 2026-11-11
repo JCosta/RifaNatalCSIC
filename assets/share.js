@@ -34,7 +34,7 @@ window.RifaShare = (() => {
     return t;
   }
 
-  // d = resposta de /api/public/tickets
+  // d = resposta de RifaAPI.publicTickets()
   function buildText(d, url) {
     const free = available(d);
     const L = [];

@@ -15,5 +15,5 @@ window.RIFA_CONFIG = {
 
   // Email sugerido no ecrã de login do backoffice (opcional).
   // Cada membro da comissão entra com o seu email e password (Authentication → Users + tabela admins).
-  ADMIN_EMAIL: 'jorgecostainf@gmail.com',
+  ADMIN_EMAIL: 'jorgecosta@csic.com',
 };

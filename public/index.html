@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rifa de Natal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="hero">
+    <div class="snow" aria-hidden="true"></div>
+    <div class="wrap hero-inner">
+      <p class="kicker">✦ Sorteio de Natal ✦</p>
+      <h1 id="event">Rifa de Natal</h1>
+      <p class="org" id="org">Associação de Pais do Centro Social da Imaculada Conceição</p>
+      <p class="hero-draw hidden" id="hero-draw"></p>
+    </div>
+    <svg class="garland" viewBox="0 0 1200 40" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 6 Q 75 36 150 6 T 300 6 T 450 6 T 600 6 T 750 6 T 900 6 T 1050 6 T 1200 6" fill="none" stroke="#1d5c3a" stroke-width="4"/>
+      <g>
+        <circle cx="75" cy="22" r="6" fill="#d4a017"/><circle cx="225" cy="22" r="6" fill="#c0392b"/>
+        <circle cx="375" cy="22" r="6" fill="#d4a017"/><circle cx="525" cy="22" r="6" fill="#c0392b"/>
+        <circle cx="675" cy="22" r="6" fill="#d4a017"/><circle cx="825" cy="22" r="6" fill="#c0392b"/>
+        <circle cx="975" cy="22" r="6" fill="#d4a017"/><circle cx="1125" cy="22" r="6" fill="#c0392b"/>
+      </g>
+    </svg>
+  </header>
+
+  <div class="wrap">
+    <div class="info-grid">
+      <section class="card hidden" id="purpose-card">
+        <h2>🎁 Para que serve</h2>
+        <p class="purpose" id="purpose"></p>
+      </section>
+      <section class="card hidden" id="draw-card">
+        <h2>🔔 Sorteio</h2>
+        <p class="draw" id="draw-date"></p>
+        <p class="sub" id="draw-location"></p>
+        <p class="countdown" id="countdown"></p>
+      </section>
+      <section class="card hidden" id="prizes-card">
+        <h2>⭐ Prémios</h2>
+        <ol class="prizes" id="prizes"></ol>
+      </section>
+    </div>
+
+    <div class="stats">
+      <div class="stat free"><div class="k">Disponíveis</div><div class="v" id="s-free">–</div></div>
+      <div class="stat sold"><div class="k">Vendidas</div><div class="v" id="s-sold">–</div></div>
+      <div class="stat"><div class="k">Total</div><div class="v" id="s-total">–</div></div>
+      <div class="stat gold hidden" id="price-box"><div class="k">Preço por rifa</div><div class="v" id="s-price">–</div></div>
+    </div>
+    <div class="progress" aria-hidden="true"><div id="bar"></div></div>
+
+    <section class="card buy-card" id="buy-card">
+      <h2>🛒 Como comprar</h2>
+      <p class="buy-text" id="buy-text">Para comprar, contacte um elemento da comissão de pais.</p>
+      <ul class="contacts" id="contacts"></ul>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">🎄 Números</h2>
+        <div class="legend"><span class="l-free">Disponível</span><span class="l-sold">Vendida</span></div>
+        <label class="check"><input type="checkbox" id="only-free"> Mostrar só disponíveis</label>
+      </div>
+      <div class="grid" id="grid" aria-live="polite"></div>
+      <p class="msg err" id="err"></p>
+      <div class="share-row" id="share-row">
+        <span class="sub">Partilhar a lista de números disponíveis:</span>
+        <div class="actions">
+          <button type="button" class="btn wa" data-share="whatsapp">WhatsApp</button>
+          <button type="button" class="btn secondary" data-share="native">Partilhar…</button>
+          <button type="button" class="btn secondary" data-share="copy">Copiar lista</button>
+        </div>
+      </div>
+      <p class="msg ok" id="share-msg"></p>
+    </section>
+
+    <footer>
+      <p class="footer-org" id="footer-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
+      <p>Atualizado às <span id="updated">–</span></p>
+    </footer>
+  </div>
+  <script src="/share.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

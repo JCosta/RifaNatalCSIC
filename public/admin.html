@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Backoffice — Rifas</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <!-- Login -->
+  <div class="wrap hidden" id="login-view">
+    <form class="card login" id="login-form">
+      <h2>🎄 Backoffice da Rifa de Natal</h2>
+      <p class="sub" style="margin:-4px 0 14px">Associação de Pais do Centro Social da Imaculada Conceição</p>
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" required>
+      <p class="msg err" id="login-err"></p>
+      <div class="actions" style="margin-top:12px"><button class="btn" type="submit">Entrar</button></div>
+    </form>
+  </div>
+
+  <!-- App -->
+  <div class="hidden" id="app-view">
+    <header class="admin-hero">
+      <div class="wrap">
+        <div>
+          <h1>🎄 Backoffice da Rifa</h1>
+          <p class="admin-org" id="admin-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
+          <a href="/" target="_blank">ver página pública ↗</a>
+        </div>
+        <div class="actions">
+          <a class="btn secondary" href="/api/admin/export.csv">Exportar CSV</a>
+          <button class="btn secondary" id="logout">Sair</button>
+        </div>
+      </div>
+    </header>
+    <div class="wrap">
+
+    <nav class="tabs">
+      <button type="button" class="tab active" data-tab="sales-tab">Vendas</button>
+      <button type="button" class="tab" data-tab="share-tab">Partilhar</button>
+      <button type="button" class="tab" data-tab="settings-tab">Configuração</button>
+    </nav>
+
+    <!-- ===== Partilhar ===== -->
+    <div id="share-tab" class="hidden">
+      <section class="card">
+        <h2>📣 Enviar números disponíveis</h2>
+        <p class="sub" style="margin:-4px 0 12px">Texto pronto a enviar a possíveis compradores. Só contém informação pública (números livres, prémios, contactos da comissão) — nunca dados de compradores. Pode editá-lo antes de enviar.</p>
+        <textarea id="share-text" class="share-text"></textarea>
+        <div class="actions" style="margin-top:10px">
+          <button type="button" class="btn wa" data-share="whatsapp">Enviar por WhatsApp</button>
+          <button type="button" class="btn secondary" data-share="native">Partilhar…</button>
+          <button type="button" class="btn secondary" data-share="copy">Copiar texto</button>
+          <button type="button" class="btn secondary" id="share-refresh">Atualizar</button>
+        </div>
+        <p class="msg ok" id="share-msg"></p>
+      </section>
+      <section class="card">
+        <h2>🔗 Link da página pública</h2>
+        <p class="sub" style="margin:-4px 0 10px">Quem abrir este link vê os números disponíveis em tempo real, sem acesso ao backoffice.</p>
+        <div class="pick" style="margin:0">
+          <input id="public-link" readonly style="flex:1;min-width:200px;width:auto">
+          <button type="button" class="btn secondary" id="copy-link">Copiar link</button>
+        </div>
+      </section>
+    </div>
+
+    <!-- ===== Configuração ===== -->
+    <div id="settings-tab" class="hidden">
+      <section class="card">
+        <h2>Configuração da rifa</h2>
+        <p class="sub" style="margin-bottom:14px">Estes dados aparecem na página pública.</p>
+        <form id="settings-form" autocomplete="off">
+          <div style="margin-bottom:12px"><label for="c-org">Entidade organizadora</label><input id="c-org" maxlength="160"></div>
+          <div class="row">
+            <div><label for="c-name">Nome da rifa</label><input id="c-name" required maxlength="120"></div>
+            <div><label for="c-price">Valor unitário de cada rifa (€)</label><input id="c-price" type="number" min="0" step="0.01" inputmode="decimal"></div>
+          </div>
+          <div class="row">
+            <div class="row" style="margin:0;grid-template-columns:3fr 2fr">
+              <div><label for="c-date">Data do sorteio</label><input id="c-date" type="date"></div>
+              <div><label for="c-time">Hora (opcional)</label><input id="c-time" type="time"></div>
+            </div>
+            <div><label for="c-location">Local do sorteio (opcional)</label><input id="c-location" maxlength="200" placeholder="ex.: Festa de Natal, ginásio da escola"></div>
+          </div>
+          <div style="margin-bottom:12px">
+            <label for="c-purpose">Fim a que se destina o sorteio</label>
+            <textarea id="c-purpose" rows="3" maxlength="2000" placeholder="ex.: Angariação de fundos para a visita de estudo do 4.º ano"></textarea>
+          </div>
+          <div style="margin-bottom:12px">
+            <label>Prémios a sortear (por ordem: 1.º, 2.º, …)</label>
+            <div id="prizes-list"></div>
+            <button type="button" class="btn secondary" id="add-prize" style="margin-top:8px">+ Adicionar prémio</button>
+          </div>
+          <div style="margin-bottom:12px">
+            <label>Comissão de pais — contactos para quem quer comprar (aparecem na página pública)</label>
+            <div id="contacts-list"></div>
+            <button type="button" class="btn secondary" id="add-contact" style="margin-top:8px">+ Adicionar contacto</button>
+          </div>
+          <div style="margin-bottom:12px">
+            <label for="c-howto">Mensagem "Como comprar"</label>
+            <input id="c-howto" maxlength="300" placeholder="Para comprar, contacte um elemento da comissão de pais.">
+          </div>
+          <p class="msg" id="settings-msg"></p>
+          <div class="actions"><button class="btn" type="submit">Guardar configuração</button></div>
+        </form>
+      </section>
+    </div>
+
+    <!-- ===== Vendas ===== -->
+    <div id="sales-tab">
+    <div class="stats">
+      <div class="stat free"><div class="k">Disponíveis</div><div class="v" id="s-free">–</div></div>
+      <div class="stat sold"><div class="k">Vendidas</div><div class="v" id="s-sold">–</div></div>
+      <div class="stat"><div class="k">Por pagar</div><div class="v" id="s-unpaid">–</div></div>
+      <div class="stat hidden" id="money-box"><div class="k">Valor recebido</div><div class="v" id="s-money">–</div></div>
+    </div>
+
+    <section class="card" id="sale-card">
+      <h2>Registar venda</h2>
+      <p class="sub" style="margin:-6px 0 12px">Uma pessoa pode comprar vários números de uma só vez — os dados são preenchidos uma única vez.</p>
+      <form id="sale-form" autocomplete="off">
+        <div class="row">
+          <div>
+            <label for="f-numbers">Números — escolha na grelha, escreva (ex.: 12, 13, 40-42) ou peça números livres</label>
+            <input id="f-numbers" required>
+            <div class="pick">
+              <span>Quero</span>
+              <input id="f-qty" type="number" min="1" max="250" value="5" inputmode="numeric" aria-label="Quantidade de números">
+              <button type="button" class="btn secondary" id="pick-random">números ao acaso</button>
+              <button type="button" class="btn secondary" id="pick-seq">seguidos</button>
+            </div>
+          </div>
+          <div>
+            <label for="f-seller">Vendido por</label>
+            <input id="f-seller" list="sellers-list" required>
+            <datalist id="sellers-list"></datalist>
+          </div>
+        </div>
+        <div class="row">
+          <div><label for="f-name">Nome do comprador</label><input id="f-name" list="buyers-list" required><datalist id="buyers-list"></datalist></div>
+          <div><label for="f-phone">Telefone</label><input id="f-phone" type="tel" inputmode="tel"></div>
+          <div><label for="f-email">Email</label><input id="f-email" type="email"></div>
+        </div>
+        <div class="row">
+          <div><label for="f-notes">Notas (opcional)</label><input id="f-notes"></div>
+          <div style="display:flex;align-items:end"><label class="check"><input type="checkbox" id="f-paid" checked> Pago</label></div>
+        </div>
+        <div class="summary hidden" id="sale-summary"></div>
+        <p class="msg" id="sale-msg"></p>
+        <div class="actions">
+          <button class="btn" type="submit" id="sale-submit">Registar</button>
+          <button class="btn secondary" type="button" id="clear-sel">Limpar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">Números</h2>
+        <div class="legend"><span class="l-free">Disponível<span class="hint"> (clique para selecionar)</span></span><span class="l-sold">Vendida<span class="hint"> (clique para editar)</span></span></div>
+      </div>
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <h2 style="margin:0">Vendas</h2>
+        <input id="search" placeholder="Pesquisar nome, telefone, email, vendedor ou número" style="max-width:380px">
+      </div>
+      <p class="sub" style="margin:-4px 0 10px;font-size:.88rem">Uma linha por compra (todos os números da mesma pessoa juntos).</p>
+      <div>
+      </div>
+      <div class="table-wrap">
+        <table class="cards">
+          <thead><tr><th>Números</th><th>Comprador</th><th>Contacto</th><th>Vendedor</th><th>Qtd.</th><th>Estado</th><th></th></tr></thead>
+          <tbody id="sales-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Por vendedor</h2>
+      <div class="table-wrap">
+        <table class="cards">
+          <thead><tr><th>Vendedor</th><th>Rifas</th><th>Pagas</th><th id="seller-money-h" class="hidden">Valor</th></tr></thead>
+          <tbody id="sellers-body"></tbody>
+        </table>
+      </div>
+    </section>
+    </div><!-- /sales-tab -->
+    </div><!-- /wrap -->
+  </div>
+
+  <!-- Barra de seleção -->
+  <div class="sel-bar hidden" id="sel-bar">
+    <div class="wrap">
+      <span class="nums" id="sel-nums"></span>
+      <span class="actions" style="flex:none">
+        <button type="button" class="btn ghost" id="sel-clear">Limpar</button>
+        <button type="button" class="btn" id="sel-go">Registar venda</button>
+      </span>
+    </div>
+  </div>
+
+  <!-- Editar / anular -->
+  <dialog id="edit-dialog">
+    <form class="inner" id="edit-form" method="dialog">
+      <h2 id="e-title">Rifa n.º <span id="e-number"></span></h2>
+      <div class="order-box hidden" id="e-order">
+        <p style="margin:0 0 6px">Esta rifa faz parte de uma compra com <strong id="e-order-count"></strong> números:</p>
+        <div class="order-nums" id="e-order-nums"></div>
+        <label class="check" style="margin-top:8px"><input type="checkbox" id="e-apply-all" checked> Aplicar as alterações a todos os números desta compra</label>
+      </div>
+      <div class="row">
+        <div><label for="e-name">Nome do comprador</label><input id="e-name" required></div>
+        <div><label for="e-seller">Vendido por</label><input id="e-seller" list="sellers-list" required></div>
+      </div>
+      <div class="row">
+        <div><label for="e-phone">Telefone</label><input id="e-phone" type="tel"></div>
+        <div><label for="e-email">Email</label><input id="e-email" type="email"></div>
+      </div>
+      <div class="row">
+        <div><label for="e-notes">Notas</label><input id="e-notes"></div>
+        <div style="display:flex;align-items:end"><label class="check"><input type="checkbox" id="e-paid"> Pago</label></div>
+      </div>
+      <p class="sub" id="e-created" style="font-size:.85rem"></p>
+      <p class="msg err" id="edit-err"></p>
+      <div class="actions" style="justify-content:space-between;margin-top:12px">
+        <div class="actions del-actions">
+          <button class="btn danger" type="button" id="e-delete">Anular venda</button>
+          <button class="btn danger hidden" type="button" id="e-delete-order">Anular compra toda</button>
+        </div>
+        <div class="actions save-actions">
+          <button class="btn secondary" type="button" id="e-cancel">Fechar</button>
+          <button class="btn" type="button" id="e-save">Guardar</button>
+        </div>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="/share.js"></script>
+  <script src="/admin.js"></script>
+</body>
+</html>

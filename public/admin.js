@@ -1,0 +1,473 @@
+'use strict';
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const euro = (v) => v.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+  let state = { total: 250, price: null, sales: [], sellers: [] };
+  let byNumber = new Map();
+  const selected = new Set();
+  let editing = null;
+  let deleteArmed = false;
+  let deleteOrderArmed = false;
+  let orders = new Map(); // order_id -> [vendas]
+
+  // ---------- helpers ----------
+  async function api(method, url, body) {
+    const r = await fetch(url, {
+      method,
+      headers: body ? { 'Content-Type': 'application/json' } : {},
+      body: body ? JSON.stringify(body) : undefined,
+      credentials: 'same-origin',
+    });
+    const data = await r.json().catch(() => ({}));
+    if (r.status === 401 && !url.includes('/auth/')) { showLogin(); throw new Error(data.error || 'Sessão expirada.'); }
+    if (!r.ok) throw new Error(data.error || 'Erro inesperado.');
+    return data;
+  }
+  function msg(el, text, kind) {
+    el.textContent = text;
+    el.className = 'msg show ' + kind;
+  }
+  function hideMsg(el) { el.className = 'msg'; }
+  function td(text, cls, label) {
+    const c = document.createElement('td'); c.textContent = text;
+    if (cls) c.className = cls;
+    if (label) c.dataset.label = label;
+    return c;
+  }
+  function emptyRow(text, cols) { const tr = document.createElement('tr'); const c = td(text, 'empty'); c.colSpan = cols; tr.append(c); return tr; }
+
+  // ---------- auth ----------
+  function showLogin() { $('app-view').classList.add('hidden'); updateSelBar(); $('login-view').classList.remove('hidden'); $('password').focus(); }
+  function showApp() { $('login-view').classList.add('hidden'); $('app-view').classList.remove('hidden'); }
+
+  $('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMsg($('login-err'));
+    try {
+      await api('POST', '/api/auth/login', { password: $('password').value });
+      $('password').value = '';
+      showApp();
+      await load();
+    } catch (err) { msg($('login-err'), err.message, 'err'); }
+  });
+  $('logout').addEventListener('click', async () => { await api('POST', '/api/auth/logout').catch(() => {}); showLogin(); });
+
+  // ---------- data ----------
+  async function load() {
+    api('GET', '/api/admin/settings').then(r => { $('admin-org').textContent = r.settings.organization || ''; }).catch(() => {});
+    state = await api('GET', '/api/admin/sales');
+    byNumber = new Map(state.sales.map(s => [s.number, s]));
+    orders = new Map();
+    for (const s of state.sales) {
+      const k = s.order_id || ('n' + s.number);
+      if (!orders.has(k)) orders.set(k, []);
+      orders.get(k).push(s);
+    }
+    for (const n of [...selected]) if (byNumber.has(n)) selected.delete(n);
+    render();
+  }
+
+  function render() {
+    const sold = state.sales.length;
+    const paid = state.sales.filter(s => s.paid).length;
+    $('s-sold').textContent = sold;
+    $('s-free').textContent = state.total - sold;
+    $('s-unpaid').textContent = sold - paid;
+    $('money-box').classList.toggle('hidden', !state.price);
+    $('seller-money-h').classList.toggle('hidden', !state.price);
+    if (state.price) $('s-money').textContent = euro(paid * state.price);
+
+    // grelha
+    const frag = document.createDocumentFragment();
+    for (let n = 1; n <= state.total; n++) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = n;
+      const s = byNumber.get(n);
+      b.className = 't' + (s ? ' sold' + (s.paid ? '' : ' unpaid') : '') + (selected.has(n) ? ' sel' : '');
+      b.title = s ? `${n} — ${s.buyer_name} (vendido por ${s.seller})` : `${n} — disponível`;
+      b.addEventListener('click', () => (s ? openEdit(n) : toggleSelect(n)));
+      frag.appendChild(b);
+    }
+    $('grid').replaceChildren(frag);
+    updateSelBar();
+
+    // vendedores
+    const dl = document.createDocumentFragment();
+    for (const s of state.sellers) { const o = document.createElement('option'); o.value = s.seller; dl.appendChild(o); }
+    $('sellers-list').replaceChildren(dl);
+    const buyers = new Map();
+    for (const s of state.sales) if (!buyers.has(s.buyer_name.toLowerCase())) buyers.set(s.buyer_name.toLowerCase(), s);
+    const bl = document.createDocumentFragment();
+    for (const s of buyers.values()) {
+      const o = document.createElement('option'); o.value = s.buyer_name;
+      o.label = [s.phone, s.email].filter(Boolean).join(' · ');
+      bl.appendChild(o);
+    }
+    $('buyers-list').replaceChildren(bl);
+    updateSummary();
+    const sb = document.createDocumentFragment();
+    for (const s of state.sellers) {
+      const tr = document.createElement('tr');
+      tr.append(td(s.seller, 'strong'), td(s.total, '', 'Rifas'), td(s.paid, '', 'Pagas'));
+      if (state.price) tr.append(td(euro(s.paid * state.price), '', 'Valor'));
+      sb.appendChild(tr);
+    }
+    if (!state.sellers.length) sb.appendChild(emptyRow('Ainda sem vendas.', 4));
+    $('sellers-body').replaceChildren(sb);
+
+    renderTable();
+  }
+
+  function chips(nums, current) {
+    const box = document.createElement('div'); box.className = 'chips';
+    for (const n of nums) {
+      const c = document.createElement('span'); c.className = 'chip' + (n === current ? ' cur' : ''); c.textContent = n;
+      box.appendChild(c);
+    }
+    return box;
+  }
+  function renderTable() {
+    const term = $('search').value.trim().toLowerCase();
+    const list = [...orders.values()]
+      .map(items => ({ items, first: items[0], nums: items.map(i => i.number) }))
+      .filter(o => !term ||
+        o.nums.some(n => String(n) === term) ||
+        [o.first.buyer_name, o.first.phone, o.first.email, o.first.seller, o.first.notes].some(v => (v || '').toLowerCase().includes(term)))
+      .sort((a, b) => a.nums[0] - b.nums[0]);
+    const frag = document.createDocumentFragment();
+    for (const o of list) {
+      const s = o.first;
+      const tr = document.createElement('tr');
+      const numsTd = document.createElement('td'); numsTd.dataset.label = 'Números'; numsTd.appendChild(chips(o.nums));
+      const contact = [s.phone, s.email].filter(Boolean).join(' · ');
+      const unpaid = o.items.filter(i => !i.paid).length;
+      const status = document.createElement('td'); status.dataset.label = 'Estado';
+      if (!unpaid) status.textContent = 'Pago';
+      else { const p = document.createElement('span'); p.className = 'pill'; p.textContent = unpaid === o.items.length ? 'Por pagar' : `${unpaid} por pagar`; status.appendChild(p); }
+      const qty = o.items.length + (state.price ? ' · ' + euro(o.items.length * state.price) : '');
+      const act = document.createElement('td'); act.className = 'act';
+      const btn = document.createElement('button'); btn.className = 'link'; btn.textContent = 'Editar';
+      btn.addEventListener('click', () => openEdit(o.nums[0]));
+      act.appendChild(btn);
+      tr.append(numsTd, td(s.buyer_name, '', 'Comprador'), td(contact || '—', '', 'Contacto'), td(s.seller, '', 'Vendedor'), td(qty, '', 'Qtd.'), status, act);
+      frag.appendChild(tr);
+    }
+    if (!list.length) frag.appendChild(emptyRow(term ? 'Sem resultados.' : 'Ainda sem vendas.', 7));
+    $('sales-body').replaceChildren(frag);
+  }
+  $('search').addEventListener('input', renderTable);
+
+  // ---------- seleção e venda ----------
+  function updateSelBar() {
+    const list = [...selected].sort((a, b) => a - b);
+    const show = list.length > 0 && !$('app-view').classList.contains('hidden') && !$('sales-tab').classList.contains('hidden');
+    $('sel-bar').classList.toggle('hidden', !show);
+    document.body.classList.toggle('has-sel', show);
+    const narrow = window.innerWidth < 480;
+    $('sel-nums').textContent = list.length <= (narrow ? 2 : 6) ? `N.º ${list.join(', ')}` : `${list.length} números`;
+    $('sel-nums').title = list.join(', ');
+  }
+  $('sel-go').addEventListener('click', () => {
+    $('sale-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setTimeout(() => $('f-name').focus({ preventScroll: true }), 350);
+  });
+  $('sel-clear').addEventListener('click', () => { selected.clear(); syncNumbersInput(); render(); });
+
+  function updateSummary() {
+    const n = selected.size;
+    $('sale-summary').classList.toggle('hidden', n === 0);
+    if (!n) { $('sale-submit').textContent = 'Registar'; return; }
+    const tot = state.price ? ` · total <span class="tot">${euro(n * state.price)}</span>` : '';
+    $('sale-summary').innerHTML = `${n} ${n === 1 ? 'rifa' : 'rifas'} para a mesma pessoa${tot}`;
+    $('sale-submit').textContent = n === 1 ? 'Registar 1 rifa' : `Registar ${n} rifas`;
+  }
+  function freeNumbers() {
+    const out = [];
+    for (let n = 1; n <= state.total; n++) if (!byNumber.has(n) && !selected.has(n)) out.push(n);
+    return out;
+  }
+  function pick(mode) {
+    hideMsg($('sale-msg'));
+    const qty = Math.max(1, parseInt($('f-qty').value, 10) || 1);
+    const free = freeNumbers();
+    if (free.length < qty) { msg($('sale-msg'), `Só há ${free.length} números livres.`, 'err'); return; }
+    let chosen;
+    if (mode === 'random') {
+      for (let i = free.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [free[i], free[j]] = [free[j], free[i]]; }
+      chosen = free.slice(0, qty);
+    } else {
+      // primeiro bloco de números seguidos livres; se não existir, os primeiros livres
+      chosen = null;
+      for (let i = 0; i + qty <= free.length; i++) {
+        if (free[i + qty - 1] - free[i] === qty - 1) { chosen = free.slice(i, i + qty); break; }
+      }
+      if (!chosen) chosen = free.slice(0, qty);
+    }
+    chosen.forEach(n => selected.add(n));
+    syncNumbersInput();
+    render();
+    $('f-name').focus();
+  }
+  $('pick-random').addEventListener('click', () => pick('random'));
+  $('pick-seq').addEventListener('click', () => pick('seq'));
+
+  // comprador já conhecido: preencher contactos automaticamente
+  $('f-name').addEventListener('change', () => {
+    const name = $('f-name').value.trim().toLowerCase();
+    const prev = state.sales.find(s => s.buyer_name.toLowerCase() === name);
+    if (!prev) return;
+    if (!$('f-phone').value) $('f-phone').value = prev.phone;
+    if (!$('f-email').value) $('f-email').value = prev.email;
+  });
+
+  function syncNumbersInput() {
+    $('f-numbers').value = [...selected].sort((a, b) => a - b).join(', ');
+  }
+  function toggleSelect(n) {
+    selected.has(n) ? selected.delete(n) : selected.add(n);
+    syncNumbersInput();
+    render();
+  }
+  // manter a grelha em sintonia quando os números são escritos à mão
+  $('f-numbers').addEventListener('input', () => {
+    selected.clear();
+    for (const part of $('f-numbers').value.split(/[,;\s]+/)) {
+      const m = part.match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) continue;
+      const a = +m[1], b = m[2] ? +m[2] : a;
+      for (let n = a; n <= Math.min(b, state.total); n++) if (n >= 1 && !byNumber.has(n)) selected.add(n);
+    }
+    render();
+  });
+  $('clear-sel').addEventListener('click', () => {
+    selected.clear();
+    $('sale-form').reset();
+    $('f-paid').checked = true;
+    restoreSeller();
+    hideMsg($('sale-msg'));
+    render();
+  });
+  function restoreSeller() { try { $('f-seller').value = localStorage.getItem('lastSeller') || ''; } catch (_) {} }
+
+  $('sale-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMsg($('sale-msg'));
+    const body = {
+      numbers: $('f-numbers').value,
+      seller: $('f-seller').value,
+      buyer_name: $('f-name').value,
+      phone: $('f-phone').value,
+      email: $('f-email').value,
+      notes: $('f-notes').value,
+      paid: $('f-paid').checked,
+    };
+    try {
+      const r = await api('POST', '/api/admin/sales', body);
+      try { localStorage.setItem('lastSeller', body.seller.trim()); } catch (_) {}
+      selected.clear();
+      $('sale-form').reset();
+      $('f-paid').checked = true;
+      restoreSeller();
+      const tot = state.price ? ` Total: ${euro(r.numbers.length * state.price)}.` : '';
+      msg($('sale-msg'), `Registado${r.numbers.length > 1 ? 's' : ''} ${r.numbers.length} ${r.numbers.length === 1 ? 'número' : 'números'} para ${body.buyer_name}: ${r.numbers.join(', ')}.${tot}`, 'ok');
+      await load();
+      $('f-numbers').focus();
+    } catch (err) {
+      msg($('sale-msg'), err.message, 'err');
+      load().catch(() => {});
+    }
+  });
+
+  // ---------- editar / anular ----------
+  const dlg = $('edit-dialog');
+  function openEdit(n) {
+    const s = byNumber.get(n);
+    if (!s) return;
+    editing = n;
+    deleteArmed = false;
+    deleteOrderArmed = false;
+    hideMsg($('edit-err'));
+    $('e-number').textContent = n;
+    const group = orders.get(s.order_id || ('n' + n)) || [s];
+    const multi = group.length > 1;
+    $('e-order').classList.toggle('hidden', !multi);
+    $('e-delete-order').classList.toggle('hidden', !multi);
+    $('e-delete').textContent = multi ? `Anular só o n.º ${n}` : 'Anular venda';
+    $('e-delete-order').textContent = `Anular compra toda (${group.length})`;
+    if (multi) {
+      $('e-order-count').textContent = group.length;
+      $('e-order-nums').replaceChildren(...[...chips(group.map(g => g.number), n).children]);
+      $('e-apply-all').checked = true;
+    }
+    $('e-name').value = s.buyer_name;
+    $('e-seller').value = s.seller;
+    $('e-phone').value = s.phone;
+    $('e-email').value = s.email;
+    $('e-notes').value = s.notes;
+    $('e-paid').checked = !!s.paid;
+    $('e-created').textContent = 'Registada em ' + new Date(s.created_at).toLocaleString('pt-PT');
+    dlg.showModal();
+  }
+  $('e-cancel').addEventListener('click', () => dlg.close());
+  $('e-save').addEventListener('click', async () => {
+    try {
+      await api('PUT', '/api/admin/sales/' + editing, {
+        buyer_name: $('e-name').value, seller: $('e-seller').value, phone: $('e-phone').value,
+        email: $('e-email').value, notes: $('e-notes').value, paid: $('e-paid').checked,
+        apply_to_order: $('e-order').classList.contains('hidden') ? true : $('e-apply-all').checked,
+      });
+      dlg.close();
+      await load();
+    } catch (err) { msg($('edit-err'), err.message, 'err'); }
+  });
+  $('e-delete').addEventListener('click', async () => {
+    if (!deleteArmed) {
+      deleteArmed = true;
+      $('e-delete').textContent = `Confirmar: anular n.º ${editing}`;
+      return;
+    }
+    try {
+      await api('DELETE', '/api/admin/sales/' + editing);
+      dlg.close();
+      await load();
+    } catch (err) { msg($('edit-err'), err.message, 'err'); }
+  });
+
+  $('e-delete-order').addEventListener('click', async () => {
+    if (!deleteOrderArmed) {
+      deleteOrderArmed = true;
+      $('e-delete-order').textContent = 'Confirmar: anular compra toda';
+      return;
+    }
+    try {
+      await api('DELETE', '/api/admin/sales/' + editing + '?scope=order');
+      dlg.close();
+      await load();
+    } catch (err) { msg($('edit-err'), err.message, 'err'); }
+  });
+
+  // ---------- abas ----------
+  document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
+    for (const id of ['sales-tab', 'share-tab', 'settings-tab']) $(id).classList.toggle('hidden', id !== t.dataset.tab);
+    if (t.dataset.tab === 'share-tab') refreshShare();
+    updateSelBar();
+    if (t.dataset.tab === 'settings-tab') loadSettings().catch(err => msg($('settings-msg'), err.message, 'err'));
+  }));
+
+  // ---------- partilhar ----------
+  async function refreshShare() {
+    $('public-link').value = location.origin + '/';
+    const r = await fetch('/api/public/tickets', { cache: 'no-store' });
+    const d = await r.json();
+    $('share-text').value = RifaShare.buildText(d, location.origin + '/');
+  }
+  const shareNotice = (t) => { msg($('share-msg'), t, 'ok'); setTimeout(() => hideMsg($('share-msg')), 4000); };
+  RifaShare.wire($('share-tab'), () => $('share-text').value, shareNotice);
+  $('share-refresh').addEventListener('click', () => refreshShare().then(() => shareNotice('Lista atualizada.')));
+  $('copy-link').addEventListener('click', async () => {
+    shareNotice((await RifaShare.copy($('public-link').value)) ? 'Link copiado.' : 'Não foi possível copiar.');
+  });
+
+  // ---------- contactos da comissão ----------
+  function contactRows() {
+    return [...$('contacts-list').querySelectorAll('.prize-row')].map(r => ({
+      name: r.querySelector('.cn').value, phone: r.querySelector('.cp').value,
+    }));
+  }
+  function renderContacts(values) {
+    const frag = document.createDocumentFragment();
+    values.forEach((v, i) => {
+      const row = document.createElement('div'); row.className = 'prize-row contact-row';
+      const n = document.createElement('input'); n.className = 'cn'; n.placeholder = 'Nome'; n.maxLength = 80; n.value = v.name || '';
+      const p = document.createElement('input'); p.className = 'cp'; p.placeholder = 'Telefone'; p.type = 'tel'; p.maxLength = 30; p.value = v.phone || '';
+      const del = document.createElement('button'); del.type = 'button'; del.className = 'icon-btn'; del.textContent = '✕'; del.title = 'Remover';
+      del.addEventListener('click', () => { const a = contactRows(); a.splice(i, 1); renderContacts(a.length ? a : [{}]); });
+      row.append(n, p, del);
+      frag.appendChild(row);
+    });
+    $('contacts-list').replaceChildren(frag);
+  }
+  $('add-contact').addEventListener('click', () => {
+    renderContacts([...contactRows(), {}]);
+    const rows = $('contacts-list').querySelectorAll('.cn'); rows[rows.length - 1].focus();
+  });
+
+  // ---------- configuração ----------
+  function prizeInputs() { return [...$('prizes-list').querySelectorAll('input')]; }
+  function renderPrizes(values) {
+    const frag = document.createDocumentFragment();
+    values.forEach((v, i) => {
+      const row = document.createElement('div'); row.className = 'prize-row';
+      const ord = document.createElement('span'); ord.className = 'ord'; ord.textContent = (i + 1) + '.º';
+      const inp = document.createElement('input'); inp.value = v; inp.maxLength = 200; inp.placeholder = 'Descrição do prémio';
+      const ctl = document.createElement('span'); ctl.className = 'ctl';
+      const mk = (txt, title, fn, disabled) => {
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'icon-btn'; b.textContent = txt; b.title = title;
+        b.disabled = !!disabled; b.addEventListener('click', fn); return b;
+      };
+      const cur = () => prizeInputs().map(x => x.value);
+      ctl.append(
+        mk('↑', 'Subir', () => { const a = cur(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; renderPrizes(a); }, i === 0),
+        mk('↓', 'Descer', () => { const a = cur(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; renderPrizes(a); }, i === values.length - 1),
+        mk('✕', 'Remover', () => { const a = cur(); a.splice(i, 1); renderPrizes(a.length ? a : ['']); }),
+      );
+      row.append(ord, inp, ctl);
+      frag.appendChild(row);
+    });
+    $('prizes-list').replaceChildren(frag);
+  }
+  $('add-prize').addEventListener('click', () => {
+    renderPrizes([...prizeInputs().map(x => x.value), '']);
+    const all = prizeInputs(); all[all.length - 1].focus();
+  });
+
+  async function loadSettings() {
+    hideMsg($('settings-msg'));
+    const { settings: s } = await api('GET', '/api/admin/settings');
+    $('c-org').value = s.organization || '';
+    $('admin-org').textContent = s.organization || '';
+    $('c-name').value = s.event_name || '';
+    $('c-price').value = s.ticket_price || '';
+    const [dd, tt] = (s.draw_date || '').split('T');
+    $('c-date').value = dd || '';
+    $('c-time').value = tt || '';
+    $('c-location').value = s.draw_location || '';
+    $('c-purpose').value = s.purpose || '';
+    renderPrizes(s.prizes && s.prizes.length ? s.prizes : ['']);
+    renderContacts(s.contacts && s.contacts.length ? s.contacts : [{}]);
+    $('c-howto').value = s.how_to_buy || '';
+  }
+
+  $('settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    hideMsg($('settings-msg'));
+    try {
+      const r = await api('PUT', '/api/admin/settings', {
+        organization: $('c-org').value,
+        event_name: $('c-name').value,
+        ticket_price: $('c-price').value || 0,
+        draw_date: $('c-date').value ? $('c-date').value + ($('c-time').value ? 'T' + $('c-time').value : '') : '',
+        draw_location: $('c-location').value,
+        purpose: $('c-purpose').value,
+        prizes: prizeInputs().map(x => x.value),
+        contacts: contactRows(),
+        how_to_buy: $('c-howto').value,
+      });
+      renderPrizes(r.settings.prizes.length ? r.settings.prizes : ['']);
+      renderContacts(r.settings.contacts.length ? r.settings.contacts : [{}]);
+      $('admin-org').textContent = r.settings.organization || '';
+      msg($('settings-msg'), 'Configuração guardada. A página pública já mostra os novos dados.', 'ok');
+      load().catch(() => {});
+    } catch (err) { msg($('settings-msg'), err.message, 'err'); }
+  });
+
+  // ---------- arranque ----------
+  (async () => {
+    restoreSeller();
+    const me = await api('GET', '/api/auth/me').catch(() => ({ authenticated: false }));
+    if (me.authenticated) { showApp(); await load().catch(() => {}); } else showLogin();
+    setInterval(() => { if (!document.hidden && !dlg.open && !$('app-view').classList.contains('hidden')) load().catch(() => {}); }, 30000);
+  })();
+})();

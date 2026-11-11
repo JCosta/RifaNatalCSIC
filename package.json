@@ -1,0 +1,16 @@
+{
+  "name": "rifas-associacao-pais",
+  "version": "1.0.0",
+  "description": "Sistema de venda de rifas para associação de pais",
+  "main": "server.js",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

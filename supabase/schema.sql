@@ -132,6 +132,14 @@ as $$
   select coalesce((select (data ->> 'total_tickets')::int from public.settings where id = 1), 250);
 $$;
 
+-- Nome (ou email) do administrador autenticado: é sempre o "vendido por" de uma venda nova
+create or replace function public._current_seller()
+returns text language sql stable security definer set search_path = public
+as $$
+  select coalesce(nullif(btrim(a.name), ''), a.email)
+  from public.admins a where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', ''));
+$$;
+
 -- Valida os dados do comprador; devolve-os limpos
 create or replace function public._validate_buyer(
   p_buyer_name text, p_phone text, p_email text, p_seller text, p_notes text,
@@ -220,6 +228,8 @@ declare
   oid text := public._new_order_id();
 begin
   perform public._require_admin();
+  -- o vendedor é o utilizador autenticado, ignorando o que o browser envie
+  p_seller := public._current_seller();
   select array_agg(distinct n order by n) into nums from unnest(p_numbers) n;
   if nums is null or cardinality(nums) = 0 or exists (select 1 from unnest(nums) n where n is null or n < 1 or n > total) then
     raise exception 'Número(s) inválido(s). Use valores entre 1 e %.', total using errcode = '22023';
@@ -260,7 +270,8 @@ begin
   perform public._require_admin();
   select * into s from public.sales where number = p_number;
   if not found then raise exception 'Rifa não encontrada.' using errcode = 'P0002'; end if;
-  select * into b from public._validate_buyer(p_buyer_name, p_phone, p_email, p_seller, p_notes);
+  -- o vendedor de uma venda registada não se altera
+  select * into b from public._validate_buyer(p_buyer_name, p_phone, p_email, s.seller, p_notes);
 
   if coalesce(p_apply_to_order, true) then
     update public.sales set buyer_name = b.buyer_name, phone = b.phone, email = b.email, seller = b.seller,

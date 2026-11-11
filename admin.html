@@ -163,8 +163,8 @@
             </div>
           </div>
           <div>
-            <label for="f-seller">Vendido por <span class="hint-inline">(por omissão, o utilizador autenticado)</span></label>
-            <input id="f-seller" list="sellers-list" title="Preenchido com o utilizador autenticado; pode ser alterado">
+            <label for="f-seller">Vendido por <span class="hint-inline">(utilizador autenticado)</span></label>
+            <input id="f-seller" readonly tabindex="-1" class="locked" title="É sempre o utilizador autenticado">
             <datalist id="sellers-list"></datalist>
           </div>
         </div>
@@ -245,7 +245,7 @@
       </div>
       <div class="row">
         <div><label for="e-name">Nome do comprador</label><input id="e-name" required></div>
-        <div><label for="e-seller">Vendido por</label><input id="e-seller" list="sellers-list" required></div>
+        <div><label for="e-seller">Vendido por</label><input id="e-seller" readonly tabindex="-1" class="locked" title="O vendedor de uma venda registada não se altera"></div>
       </div>
       <div class="row">
         <div><label for="e-phone">Telefone</label><input id="e-phone" type="tel"></div>

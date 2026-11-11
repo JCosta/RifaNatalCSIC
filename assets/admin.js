@@ -293,7 +293,15 @@
     $('e-delete-order').textContent = `Anular compra toda (${group.length})`;
     if (multi) {
       $('e-order-count').textContent = group.length;
-      $('e-order-nums').replaceChildren(...[...chips(group.map(g => g.number), n).children]);
+      // cada número da compra é clicável: escolhe qual se edita / anula sozinho
+      $('e-order-nums').replaceChildren(...group.map(g => {
+        const b = document.createElement('button');
+        b.type = 'button'; b.className = 'chip chip-btn' + (g.number === n ? ' cur' : '');
+        b.textContent = g.number; b.title = `Selecionar o n.º ${g.number}`;
+        b.setAttribute('aria-pressed', g.number === n ? 'true' : 'false');
+        b.addEventListener('click', () => { if (g.number !== n) openEdit(g.number); });
+        return b;
+      }));
       $('e-apply-all').checked = true;
     }
     $('e-name').value = s.buyer_name;
@@ -303,7 +311,7 @@
     $('e-notes').value = s.notes;
     $('e-paid').checked = !!s.paid;
     $('e-created').textContent = 'Registada em ' + new Date(s.created_at).toLocaleString('pt-PT');
-    dlg.showModal();
+    if (!dlg.open) dlg.showModal();
   }
   $('e-cancel').addEventListener('click', () => dlg.close());
   $('e-save').addEventListener('click', async () => {

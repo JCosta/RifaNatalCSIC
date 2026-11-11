@@ -139,6 +139,8 @@ textarea { resize: vertical; }
 .order-nums { display: flex; flex-wrap: wrap; gap: 4px; }
 .chip { display: inline-block; min-width: 34px; text-align: center; padding: 3px 7px; border-radius: 6px; background: var(--sold-bg); color: var(--sold); font-weight: 700; font-size: .85rem; font-variant-numeric: tabular-nums; }
 .chip.cur { background: var(--sold); color: #fff; }
+.chip-btn { border: 0; cursor: pointer; font-family: inherit; padding: 6px 10px; min-width: 44px; min-height: 34px; }
+.chip-btn:hover:not(.cur) { background: #f0cfcd; }
 td .chips { display: flex; flex-wrap: wrap; gap: 3px; max-width: 220px; }
 
 /* Como comprar / partilhar */

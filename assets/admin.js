@@ -75,6 +75,7 @@
     RifaAPI.getSettings().then(s => {
       $('admin-org').textContent = (s && s.organization) || '';
       $('admin-logo').src = (s && s.logo) || DEFAULT_LOGO;
+      RifaAPI.setFavicon((s && s.logo) || null);
     }).catch(() => {});
     state = await api(RifaAPI.adminData());
     byNumber = new Map(state.sales.map(s => [s.number, s]));
@@ -550,7 +551,7 @@
   });
 
   // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
-  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-5';
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-7';
   let logoValue = '';           // '' = imagem por omissão
   function showLogo() {
     $('c-logo-preview').src = logoValue || DEFAULT_LOGO;
@@ -586,7 +587,7 @@
   });
   $('c-logo-reset').addEventListener('click', () => { logoValue = ''; showLogo(); $('c-logo-state').textContent = 'A usar a imagem por omissão (guarde a configuração para aplicar).'; });
 
-  const SOCIAL = ['website', 'facebook', 'instagram', 'youtube', 'email', 'phone'];
+  const SOCIAL = ['website', 'facebook', 'instagram', 'youtube', 'email', 'phone', 'address'];
 
   // ---------- configuração ----------
   // prémios: [{ name, detail }] — o descritivo é opcional
@@ -676,6 +677,7 @@
       for (const k of SOCIAL) $('s-' + k).value = (r.social && r.social[k]) || '';
       logoValue = r.logo || ''; showLogo();
       $('admin-logo').src = logoValue || DEFAULT_LOGO;
+      RifaAPI.setFavicon(logoValue || null);
       msg($('settings-msg'), 'Configuração guardada. A página pública já mostra os novos dados.', 'ok');
       load().catch(() => {});
     } catch (err) { msg($('settings-msg'), err.message, 'err'); }

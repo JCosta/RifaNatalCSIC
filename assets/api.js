@@ -77,6 +77,25 @@ window.RifaAPI = (() => {
     return { ok: true, value: e, suggestion: TYPOS[dom] ? e.split('@')[0] + '@' + TYPOS[dom] : null };
   }
 
+  // Ícone do separador a partir do logótipo da configuração (data URL ou caminho); null = ícone por omissão
+  function setFavicon(src) {
+    const links = [...document.querySelectorAll('link[rel~="icon"]')];
+    const apply = (href) => links.forEach(l => { l.href = href; });
+    if (!src) { links.forEach(l => { if (l.dataset.orig) l.href = l.dataset.orig; }); return; }
+    links.forEach(l => { if (!l.dataset.orig) l.dataset.orig = l.getAttribute('href'); });
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, 64, 64);
+        const s = Math.min(64 / img.width, 64 / img.height), w = img.width * s, h = img.height * s;
+        ctx.drawImage(img, (64 - w) / 2, (64 - h) / 2, w, h);
+        apply(c.toDataURL('image/png'));
+      } catch (_) { apply(src); }
+    };
+    img.src = src;
+  }
+
   // "5, 7, 10-12" | [5, 7] -> [5, 7, 10, 11, 12]; null se inválido
   function parseNumbers(input, total) {
     const out = new Set();
@@ -102,6 +121,7 @@ window.RifaAPI = (() => {
     notConfiguredMessage: NOT_CONFIGURED,
     ApiError,
     parseNumbers,
+    setFavicon,
     normalizePhone,
     checkEmail,
     PHONE_HELP,

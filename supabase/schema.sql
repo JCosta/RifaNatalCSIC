@@ -492,6 +492,8 @@ begin
     sv := public._normalize_phone(public._clean(p_data -> 'social' ->> 'phone', 40));
     if sv is null then errs := array_append(errs, 'Telefone da instituição inválido.');
     elsif sv <> '' then social := social || jsonb_build_object('phone', sv); end if;
+    sv := public._clean(p_data -> 'social' ->> 'address', 200);           -- morada (texto livre)
+    if sv <> '' then social := social || jsonb_build_object('address', sv); end if;
   else
     social := coalesce((select data -> 'social' from public.settings where id = 1), '{}'::jsonb);
   end if;

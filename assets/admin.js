@@ -266,7 +266,7 @@
     hideMsg($('sale-msg'));
     render();
   });
-  // o vendedor é sempre o utilizador autenticado (nome, ou email se não tiver nome)
+  // por omissão o vendedor é o utilizador autenticado (nome, ou email se não tiver nome); pode ser alterado
   function setSeller() { $('f-seller').value = me ? (me.name || me.email || '') : ''; }
 
   $('sale-form').addEventListener('submit', async (e) => {
@@ -274,9 +274,7 @@
     hideMsg($('sale-msg'));
     const numbers = RifaAPI.parseNumbers($('f-numbers').value, state.total);
     if (!numbers) { msg($('sale-msg'), `Número(s) inválido(s). Use valores entre 1 e ${state.total} (ex.: 12, 13, 40-42).`, 'err'); return; }
-    if (!me) await loadMe();
-    setSeller();
-    if (!$('f-seller').value) { msg($('sale-msg'), 'Não foi possível identificar o utilizador autenticado. Saia e volte a entrar.', 'err'); return; }
+    if (!$('f-seller').value.trim()) { if (!me) await loadMe(); setSeller(); }
     const body = {
       numbers,
       seller: $('f-seller').value,

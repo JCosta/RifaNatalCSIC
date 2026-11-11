@@ -39,6 +39,44 @@ window.RifaAPI = (() => {
     return res.data;
   }
 
+  // Telefone: mesma regra que a base de dados (supabase/schema.sql → _normalize_phone).
+  // Devolve { value, country } com o número formatado, { value: '' } se vazio, ou null se inválido.
+  function normalizePhone(input) {
+    let d = String(input ?? '').trim();
+    if (!d) return { value: '', country: '' };
+    d = d.replace(/[\s().\/-]/g, '');
+    if (d.startsWith('00')) d = '+' + d.slice(2);
+    if (!/^\+?\d+$/.test(d)) return null;
+    const pt = (r) => ({ value: `+351 ${r.slice(0, 3)} ${r.slice(3, 6)} ${r.slice(6)}`, country: 'Portugal' });
+    const br = (r) => {
+      if (/^[1-9][1-9]9\d{8}$/.test(r)) return { value: `+55 ${r.slice(0, 2)} ${r.slice(2, 7)}-${r.slice(7)}`, country: 'Brasil' };
+      if (/^[1-9][1-9][2-8]\d{7}$/.test(r)) return { value: `+55 ${r.slice(0, 2)} ${r.slice(2, 6)}-${r.slice(6)}`, country: 'Brasil' };
+      return null;
+    };
+    if (d.startsWith('+')) {
+      d = d.slice(1);
+      if (d.startsWith('351')) { const r = d.slice(3); return /^[29]\d{8}$/.test(r) ? pt(r) : null; }
+      if (d.startsWith('55')) { let r = d.slice(2); if (r.startsWith('0')) r = r.slice(1); return br(r); }
+      return d.length >= 8 && d.length <= 15 ? { value: '+' + d, country: 'internacional' } : null;
+    }
+    if (/^[29]\d{8}$/.test(d)) return pt(d);
+    return br(d.startsWith('0') && (d.length === 11 || d.length === 12) ? d.slice(1) : d);
+  }
+  const PHONE_HELP = 'Exemplos: 912 345 678 (Portugal), +55 11 98765-4321 (Brasil) ou +indicativo para outros países.';
+
+  // Email: formato básico + sugestão para gralhas comuns no domínio
+  const EMAIL_RE = /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/;
+  const TYPOS = { 'gmai.com': 'gmail.com', 'gmial.com': 'gmail.com', 'gmal.com': 'gmail.com', 'gmail.co': 'gmail.com', 'gmail.pt': 'gmail.com',
+    'gnail.com': 'gmail.com', 'gamil.com': 'gmail.com', 'hotmial.com': 'hotmail.com', 'hotmal.com': 'hotmail.com', 'hotmail.co': 'hotmail.com',
+    'outlok.com': 'outlook.com', 'outlook.co': 'outlook.com', 'yaho.com': 'yahoo.com', 'sapo.pr': 'sapo.pt', 'sapo.com': 'sapo.pt' };
+  function checkEmail(input) {
+    const e = String(input ?? '').trim().toLowerCase();
+    if (!e) return { ok: true, value: '' };
+    if (!EMAIL_RE.test(e) || e.includes('..')) return { ok: false, value: e };
+    const dom = e.split('@')[1];
+    return { ok: true, value: e, suggestion: TYPOS[dom] ? e.split('@')[0] + '@' + TYPOS[dom] : null };
+  }
+
   // "5, 7, 10-12" | [5, 7] -> [5, 7, 10, 11, 12]; null se inválido
   function parseNumbers(input, total) {
     const out = new Set();
@@ -64,6 +102,9 @@ window.RifaAPI = (() => {
     notConfiguredMessage: NOT_CONFIGURED,
     ApiError,
     parseNumbers,
+    normalizePhone,
+    checkEmail,
+    PHONE_HELP,
 
     // ---- público ----
     publicTickets: () => rpc('public_tickets'),

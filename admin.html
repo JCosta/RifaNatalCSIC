@@ -6,7 +6,7 @@
   <meta name="robots" content="noindex">
   <title>Backoffice — Rifas</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="assets/styles.css?v=20261111-1">
+  <link rel="stylesheet" href="assets/styles.css?v=20261111-2">
 </head>
 <body>
   <!-- Login -->
@@ -170,8 +170,8 @@
         </div>
         <div class="row">
           <div><label for="f-name">Nome do comprador</label><input id="f-name" list="buyers-list" required><datalist id="buyers-list"></datalist></div>
-          <div><label for="f-phone">Telefone</label><input id="f-phone" type="tel" inputmode="tel"></div>
-          <div><label for="f-email">Email</label><input id="f-email" type="email"></div>
+          <div><label for="f-phone">Telefone</label><input id="f-phone" type="tel" inputmode="tel" placeholder="912 345 678 ou +55 11 98765-4321"><div class="field-hint" id="f-phone-hint"></div></div>
+          <div><label for="f-email">Email</label><input id="f-email" type="email" inputmode="email" placeholder="nome@exemplo.pt"><div class="field-hint" id="f-email-hint"></div></div>
         </div>
         <div class="row">
           <div><label for="f-notes">Notas (opcional)</label><input id="f-notes"></div>
@@ -248,8 +248,8 @@
         <div><label for="e-seller">Vendido por</label><input id="e-seller" readonly tabindex="-1" class="locked" title="O vendedor de uma venda registada não se altera"></div>
       </div>
       <div class="row">
-        <div><label for="e-phone">Telefone</label><input id="e-phone" type="tel"></div>
-        <div><label for="e-email">Email</label><input id="e-email" type="email"></div>
+        <div><label for="e-phone">Telefone</label><input id="e-phone" type="tel" inputmode="tel"><div class="field-hint" id="e-phone-hint"></div></div>
+        <div><label for="e-email">Email</label><input id="e-email" type="email" inputmode="email"><div class="field-hint" id="e-email-hint"></div></div>
       </div>
       <div class="row">
         <div><label for="e-notes">Notas</label><input id="e-notes"></div>
@@ -271,9 +271,9 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script src="config.js?v=20261111-1"></script>
-  <script src="assets/api.js?v=20261111-1"></script>
-  <script src="assets/share.js?v=20261111-1"></script>
-  <script src="assets/admin.js?v=20261111-1"></script>
+  <script src="config.js?v=20261111-2"></script>
+  <script src="assets/api.js?v=20261111-2"></script>
+  <script src="assets/share.js?v=20261111-2"></script>
+  <script src="assets/admin.js?v=20261111-2"></script>
 </body>
 </html>

@@ -140,6 +140,56 @@ as $$
   from public.admins a where lower(a.email) = lower(coalesce(auth.jwt() ->> 'email', ''));
 $$;
 
+-- Telefone: valida e normaliza números de Portugal (+351) e do Brasil (+55);
+-- outros países são aceites com indicativo "+". Devolve '' se vazio e NULL se inválido.
+create or replace function public._normalize_phone(p text)
+returns text language plpgsql immutable
+as $$
+declare
+  d text;
+  r text;
+begin
+  if p is null or btrim(p) = '' then return ''; end if;
+  d := regexp_replace(btrim(p), '[[:space:]()./-]', '', 'g');
+  if d ~ '^00' then d := '+' || substr(d, 3); end if;
+  if d !~ '^\+?[0-9]+$' then return null; end if;
+
+  if left(d, 1) = '+' then
+    d := substr(d, 2);
+    if d ~ '^351' then r := substr(d, 4);
+      if r ~ '^[29][0-9]{8}$' then
+        return '+351 ' || substr(r, 1, 3) || ' ' || substr(r, 4, 3) || ' ' || substr(r, 7, 3);
+      end if;
+      return null;
+    elsif d ~ '^55' then r := substr(d, 3);
+      if r ~ '^0' then r := substr(r, 2); end if;
+    elsif length(d) between 8 and 15 then
+      return '+' || d;                                       -- outro país
+    else
+      return null;
+    end if;
+  else
+    if d ~ '^[29][0-9]{8}$' then                             -- Portugal sem indicativo
+      return '+351 ' || substr(d, 1, 3) || ' ' || substr(d, 4, 3) || ' ' || substr(d, 7, 3);
+    end if;
+    r := case when d ~ '^0' and length(d) in (11, 12) then substr(d, 2) else d end;  -- Brasil sem indicativo
+  end if;
+
+  -- Brasil: DDD (2 algarismos, sem zeros) + 9 algarismos (telemóvel, começa por 9) ou 8 (fixo)
+  if r ~ '^[1-9][1-9]9[0-9]{8}$' then
+    return '+55 ' || substr(r, 1, 2) || ' ' || substr(r, 3, 5) || '-' || substr(r, 8, 4);
+  elsif r ~ '^[1-9][1-9][2-8][0-9]{7}$' then
+    return '+55 ' || substr(r, 1, 2) || ' ' || substr(r, 3, 4) || '-' || substr(r, 7, 4);
+  end if;
+  return null;
+end $$;
+
+create or replace function public._valid_email(e text)
+returns boolean language sql immutable
+as $$
+  select e ~ '^[a-z0-9._%+''-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$' and e !~ '\.\.';
+$$;
+
 -- Valida os dados do comprador; devolve-os limpos
 create or replace function public._validate_buyer(
   p_buyer_name text, p_phone text, p_email text, p_seller text, p_notes text,
@@ -149,15 +199,15 @@ as $$
 declare errs text[] := '{}';
 begin
   buyer_name := public._clean(p_buyer_name, 120);
-  phone      := public._clean(p_phone, 30);
+  phone      := public._normalize_phone(public._clean(p_phone, 40));
   email      := lower(public._clean(p_email, 160));
   seller     := public._clean(p_seller, 120);
   notes      := public._clean(p_notes, 500);
   if buyer_name = '' then errs := array_append(errs, 'O nome do comprador é obrigatório.'); end if;
   if seller = ''     then errs := array_append(errs, 'Indique quem vendeu a rifa.'); end if;
-  if phone = '' and email = '' then errs := array_append(errs, 'Indique pelo menos um contacto (telefone ou email).'); end if;
-  if phone <> '' and phone !~ '^[+0-9][0-9 ().-]{5,}$' then errs := array_append(errs, 'Telefone inválido.'); end if;
-  if email <> '' and email !~ '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$' then errs := array_append(errs, 'Email inválido.'); end if;
+  if phone is null then errs := array_append(errs, 'Telefone inválido. Exemplos: 912 345 678 (Portugal), +55 11 98765-4321 (Brasil) ou +indicativo para outros países.'); phone := ''; end if;
+  if phone = '' and email = '' and cardinality(errs) = 0 then errs := array_append(errs, 'Indique pelo menos um contacto (telefone ou email).'); end if;
+  if email <> '' and not public._valid_email(email) then errs := array_append(errs, 'Email inválido (ex.: nome@gmail.com).'); end if;
   if cardinality(errs) > 0 then
     raise exception '%', array_to_string(errs, ' ') using errcode = '22023';
   end if;
@@ -383,13 +433,14 @@ begin
     limit 50) t where v <> '';
 
   select coalesce(jsonb_agg(jsonb_build_object('name', n, 'phone', p)), '[]'::jsonb) into contacts from (
-    select public._clean(x ->> 'name', 80) as n, public._clean(x ->> 'phone', 30) as p
+    select public._clean(x ->> 'name', 80) as n,
+           coalesce(public._normalize_phone(public._clean(x ->> 'phone', 40)), '!' || public._clean(x ->> 'phone', 40)) as p
     from jsonb_array_elements(case when jsonb_typeof(p_data -> 'contacts') = 'array' then p_data -> 'contacts' else '[]'::jsonb end) x
     limit 30) t where n <> '' or p <> '';
   for c in select * from jsonb_array_elements(contacts) loop
     if c ->> 'name' = '' then errs := array_append(errs, 'Cada contacto da comissão precisa de um nome.'); end if;
-    if c ->> 'phone' <> '' and c ->> 'phone' !~ '^[+0-9][0-9 ().-]{5,}$' then
-      errs := array_append(errs, format('Telefone inválido: %s', c ->> 'phone'));
+    if left(c ->> 'phone', 1) = '!' then
+      errs := array_append(errs, format('Telefone inválido: %s (ex.: 912 345 678 ou +55 11 98765-4321).', substr(c ->> 'phone', 2)));
     end if;
   end loop;
 

@@ -177,6 +177,48 @@
   }
   $('search').addEventListener('input', renderTable);
 
+  // ---------- validação de contactos (telefone PT/BR/internacional e email) ----------
+  function hint(id, text, kind) { const h = $(id); h.textContent = text || ''; h.dataset.kind = kind || ''; h.replaceChildren(document.createTextNode(text || '')); return h; }
+  function checkPhoneField(inputId, hintId, format) {
+    const v = $(inputId).value;
+    const r = RifaAPI.normalizePhone(v);
+    if (!r) { hint(hintId, 'Telefone inválido. ' + RifaAPI.PHONE_HELP, 'err'); $(inputId).setAttribute('aria-invalid', 'true'); return false; }
+    $(inputId).removeAttribute('aria-invalid');
+    if (format && r.value) $(inputId).value = r.value;
+    hint(hintId, r.value ? '✓ ' + (r.country === 'internacional' ? 'Número internacional' : r.country) + (format ? '' : ' · ' + r.value) : '', 'ok');
+    return true;
+  }
+  function checkEmailField(inputId, hintId, format) {
+    const r = RifaAPI.checkEmail($(inputId).value);
+    if (!r.ok) { hint(hintId, 'Email inválido (ex.: nome@gmail.com).', 'err'); $(inputId).setAttribute('aria-invalid', 'true'); return false; }
+    $(inputId).removeAttribute('aria-invalid');
+    if (format) $(inputId).value = r.value;
+    if (r.suggestion) {
+      const h = hint(hintId, 'Quis dizer ', 'warn');
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'link'; b.textContent = r.suggestion;
+      b.addEventListener('click', () => { $(inputId).value = r.suggestion; checkEmailField(inputId, hintId, true); });
+      h.append(b, document.createTextNode('?'));
+    } else hint(hintId, '', '');
+    return true;
+  }
+  for (const [inp, h] of [['f-phone', 'f-phone-hint'], ['e-phone', 'e-phone-hint']]) {
+    $(inp).addEventListener('input', () => { if ($(h).dataset.kind === 'err') checkPhoneField(inp, h, false); else hint(h, '', ''); });
+    $(inp).addEventListener('blur', () => checkPhoneField(inp, h, true));
+  }
+  for (const [inp, h] of [['f-email', 'f-email-hint'], ['e-email', 'e-email-hint']]) {
+    $(inp).addEventListener('input', () => { if ($(h).dataset.kind === 'err') checkEmailField(inp, h, false); });
+    $(inp).addEventListener('blur', () => checkEmailField(inp, h, true));
+  }
+  function contactsOk(prefix, msgEl) {
+    const okP = checkPhoneField(prefix + '-phone', prefix + '-phone-hint', true);
+    const okE = checkEmailField(prefix + '-email', prefix + '-email-hint', true);
+    if (!okP || !okE) { msg(msgEl, !okP ? 'Telefone inválido. ' + RifaAPI.PHONE_HELP : 'Email inválido.', 'err'); return false; }
+    if (!$(prefix + '-phone').value.trim() && !$(prefix + '-email').value.trim()) {
+      msg(msgEl, 'Indique pelo menos um contacto (telefone ou email) para podermos contactar o comprador.', 'err'); return false;
+    }
+    return true;
+  }
+
   // ---------- seleção e venda ----------
   function updateSelBar() {
     const list = [...selected].sort((a, b) => a - b);
@@ -275,6 +317,7 @@
     hideMsg($('sale-msg'));
     const numbers = RifaAPI.parseNumbers($('f-numbers').value, state.total);
     if (!numbers) { msg($('sale-msg'), `Número(s) inválido(s). Use valores entre 1 e ${state.total} (ex.: 12, 13, 40-42).`, 'err'); return; }
+    if (!contactsOk('f', $('sale-msg'))) return;
     if (!me) await loadMe();
     setSeller();
     const body = {
@@ -290,6 +333,7 @@
       const r = await api(RifaAPI.createSale(body));
       selected.clear();
       $('sale-form').reset();
+      for (const h of ['f-phone-hint', 'f-email-hint']) hint(h, '', '');
       $('f-paid').checked = true;
       setSeller();
       const tot = state.price ? ` Total: ${euro(r.numbers.length * state.price)}.` : '';
@@ -337,11 +381,14 @@
     $('e-email').value = s.email;
     $('e-notes').value = s.notes;
     $('e-paid').checked = !!s.paid;
+    for (const h of ['e-phone-hint', 'e-email-hint']) hint(h, '', '');
     $('e-created').textContent = 'Registada em ' + new Date(s.created_at).toLocaleString('pt-PT');
     if (!dlg.open) dlg.showModal();
   }
   $('e-cancel').addEventListener('click', () => dlg.close());
   $('e-save').addEventListener('click', async () => {
+    hideMsg($('edit-err'));
+    if (!contactsOk('e', $('edit-err'))) return;
     try {
       await api(RifaAPI.updateSale(editing, {
         buyer_name: $('e-name').value, seller: $('e-seller').value, phone: $('e-phone').value,

@@ -188,6 +188,13 @@ input.locked { background: #f6f1e7; color: var(--ink); font-weight: 700; cursor:
 input.locked:focus { outline: none; }
 .hint-inline { color: var(--muted); font-size: .78rem; }
 
+.field-hint { font-size: .8rem; min-height: 1.1em; margin-top: 3px; color: var(--muted); }
+.field-hint[data-kind="ok"] { color: var(--free); font-weight: 600; }
+.field-hint[data-kind="warn"] { color: #8a5a00; font-weight: 600; }
+.field-hint[data-kind="err"] { color: var(--sold); font-weight: 600; }
+.field-hint .link { font-weight: 700; }
+input[aria-invalid="true"] { border-color: var(--sold); background: #fff6f5; }
+
 /* Barra de seleção (aparece quando há números escolhidos na grelha) */
 .sel-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--free); color: #fff;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.18); }

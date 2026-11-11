@@ -48,6 +48,18 @@ Entre em `admin.html` com a password → **Configuração**: preço, prémios, f
 
 ---
 
+## Validação de contactos
+
+O telefone é validado e normalizado no browser e na base de dados (mesma regra):
+
+| Origem | Aceita, p. ex. | Guardado como |
+|---|---|---|
+| Portugal | `912345678`, `+351 912 345 678`, `00351…` (9 algarismos, começa por 9 ou 2) | `+351 912 345 678` |
+| Brasil | `11 98765-4321`, `(11) 98765 4321`, `+55…`, `0055…` (DDD + 8/9 algarismos) | `+55 11 98765-4321` |
+| Outros países | com indicativo `+` (8 a 15 algarismos) | `+33612345678` |
+
+O email tem validação de formato e sugestões para gralhas comuns (`gmai.com` → `gmail.com`). Cada venda precisa de pelo menos um contacto.
+
 ## Segurança e privacidade
 
 - Toda a lógica corre em funções SQL no Supabase (`supabase/schema.sql`), com **Row Level Security** em todas as tabelas.

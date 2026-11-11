@@ -224,6 +224,12 @@ input[aria-invalid="true"] { border-color: var(--sold); background: #fff6f5; }
 .prizes .p-text { display: flex; flex-direction: column; gap: 2px; }
 .prizes .p-detail { color: var(--muted); font-size: .88rem; line-height: 1.35; }
 
+/* Mensagem para o comprador */
+.buyer-msg { border: 2px solid var(--free); background: #f3faf6; border-radius: 12px; padding: 14px; margin: 10px 0 14px; }
+.buyer-msg-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 10px; color: var(--free); }
+.buyer-msg textarea { font-family: inherit; font-size: .95rem; line-height: 1.45; background: #fff; }
+.buyer-msg .btn { text-decoration: none; }
+
 /* Barra de seleção (aparece quando há números escolhidos na grelha) */
 .sel-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--free); color: #fff;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.18); }
@@ -312,6 +318,7 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 
   .results li { flex-wrap: wrap; gap: 6px 12px; }
   .results .r-pos { min-width: 0; }
   .prize-detail { padding: 0 0 0 34px; }
+  .buyer-msg .actions .btn { flex: 1 1 auto; text-align: center; }
   .contact-row { flex-wrap: wrap; }
   .contact-row .cn { flex: 1 1 100%; }
   .contact-row .cp { flex: 1; }

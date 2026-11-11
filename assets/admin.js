@@ -73,6 +73,7 @@
   // ---------- data ----------
   async function load() {
     RifaAPI.getSettings().then(s => {
+      cfg = s || {};
       $('admin-org').textContent = (s && s.organization) || '';
       $('admin-logo').src = (s && s.logo) || DEFAULT_LOGO;
       RifaAPI.setFavicon((s && s.logo) || null);
@@ -223,6 +224,62 @@
     return true;
   }
 
+  // ---------- mensagem de confirmação para o comprador ----------
+  let cfg = {};
+  function drawDateText() {
+    const m = String(cfg.draw_date || '').match(/^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2}):(\d{2}))?$/);
+    if (!m) return '';
+    const dt = new Date(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0));
+    let t = dt.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' });
+    if (m[4]) t += ', às ' + dt.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+    return t;
+  }
+  function buyerMessage(p) {
+    // p = { name, numbers: [..], paid: bool }
+    const first = String(p.name || '').trim().split(/\s+/)[0] || '';
+    const nums = [...p.numbers].sort((a, b) => a - b);
+    const n = nums.length;
+    const L = [];
+    L.push(`Olá ${first}! 🎄`);
+    L.push('');
+    L.push(`${n === 1 ? 'Fica registado o teu número' : `Ficam registados os teus ${n} números`} da ${cfg.event_name || 'Rifa de Natal'}${cfg.organization ? ' — ' + cfg.organization : ''}:`);
+    L.push(`🎟️ N.º ${nums.join(', ')}`);
+    if (state.price) L.push(`💶 Total: ${euro(n * state.price)}${p.paid ? ' (pago)' : ' (a pagar)'}`);
+    const dd = drawDateText();
+    if (dd) L.push(`📅 Sorteio: ${dd}${cfg.draw_location ? ' — ' + cfg.draw_location : ''}`);
+    L.push('');
+    L.push(`Os números premiados serão publicados aqui: ${publicUrl()}`);
+    L.push('');
+    L.push('Boa sorte e obrigado pela tua contribuição! 💛');
+    return L.join('\n');
+  }
+  function showBuyerMessage(p) {
+    $('buyer-msg-title').textContent = `${p.numbers.length === 1 ? 'Registado 1 número' : `Registados ${p.numbers.length} números`} para ${p.name}`;
+    $('buyer-msg-text').value = buyerMessage(p);
+    const digits = String(p.phone || '').replace(/\D/g, '');
+    $('buyer-msg-wa').dataset.phone = digits;
+    $('buyer-msg-wa').textContent = digits ? 'Enviar por WhatsApp' : 'Abrir no WhatsApp';
+    $('buyer-msg-mail').dataset.email = p.email || '';
+    $('buyer-msg-mail').classList.toggle('hidden', !p.email);
+    $('buyer-msg-hint').textContent = digits ? `WhatsApp: ${p.phone}` : 'Sem telefone: no WhatsApp escolha o contacto manualmente.';
+    syncBuyerLinks();
+    $('buyer-msg').classList.remove('hidden');
+    $('buyer-msg').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+  function syncBuyerLinks() {
+    const text = $('buyer-msg-text').value;
+    const digits = $('buyer-msg-wa').dataset.phone || '';
+    $('buyer-msg-wa').href = (digits ? 'https://wa.me/' + digits : 'https://wa.me/') + '?text=' + encodeURIComponent(text);
+    const email = $('buyer-msg-mail').dataset.email || '';
+    $('buyer-msg-mail').href = 'mailto:' + email + '?subject=' + encodeURIComponent((cfg.event_name || 'Rifa de Natal') + ' — os seus números') + '&body=' + encodeURIComponent(text);
+  }
+  $('buyer-msg-text').addEventListener('input', syncBuyerLinks);
+  $('buyer-msg-close').addEventListener('click', () => $('buyer-msg').classList.add('hidden'));
+  $('buyer-msg-copy').addEventListener('click', async () => {
+    const ok = await RifaShare.copy($('buyer-msg-text').value);
+    $('buyer-msg-hint').textContent = ok ? 'Mensagem copiada.' : 'Não foi possível copiar: selecione o texto e copie à mão.';
+  });
+
   // ---------- seleção e venda ----------
   function updateSelBar() {
     const list = [...selected].sort((a, b) => a - b);
@@ -306,6 +363,7 @@
     render();
   });
   $('clear-sel').addEventListener('click', () => {
+    $('buyer-msg').classList.add('hidden');
     selected.clear();
     $('sale-form').reset();
     $('f-paid').checked = true;
@@ -340,8 +398,9 @@
       for (const h of ['f-phone-hint', 'f-email-hint']) hint(h, '', '');
       $('f-paid').checked = true;
       setSeller();
-      const tot = state.price ? ` Total: ${euro(r.numbers.length * state.price)}.` : '';
-      msg($('sale-msg'), `Registado${r.numbers.length > 1 ? 's' : ''} ${r.numbers.length} ${r.numbers.length === 1 ? 'número' : 'números'} para ${body.buyer_name}: ${r.numbers.join(', ')}.${tot}`, 'ok');
+      hideMsg($('sale-msg'));
+      showBuyerMessage({ name: body.buyer_name.trim(), numbers: r.numbers, paid: body.paid,
+        phone: RifaAPI.normalizePhone(body.phone)?.value || '', email: RifaAPI.checkEmail(body.email).value || '' });
       await load();
       $('f-numbers').focus();
     } catch (err) {
@@ -390,6 +449,14 @@
     if (!dlg.open) dlg.showModal();
   }
   $('e-cancel').addEventListener('click', () => dlg.close());
+  // mensagem de confirmação para a compra toda (todos os números da mesma compra)
+  $('e-message').addEventListener('click', () => {
+    const s = byNumber.get(editing);
+    if (!s) return;
+    const group = orders.get(s.order_id || ('n' + s.number)) || [s];
+    dlg.close();
+    showBuyerMessage({ name: s.buyer_name, numbers: group.map(g => g.number), paid: group.every(g => g.paid), phone: s.phone, email: s.email });
+  });
   $('e-save').addEventListener('click', async () => {
     hideMsg($('edit-err'));
     if (!contactsOk('e', $('edit-err'))) return;
@@ -551,7 +618,7 @@
   });
 
   // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
-  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-8';
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-10';
   let logoValue = '';           // '' = imagem por omissão
   function showLogo() {
     $('c-logo-preview').src = logoValue || DEFAULT_LOGO;

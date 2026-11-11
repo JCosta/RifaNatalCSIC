@@ -6,17 +6,17 @@
   <meta name="robots" content="noindex">
   <title>Backoffice — Rifas</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
-    <link rel="icon" href="favicon.ico?v=20261111-8" sizes="any">
-  <link rel="icon" id="favicon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20261111-8">
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261111-8">
+    <link rel="icon" href="favicon.ico?v=20261111-10" sizes="any">
+  <link rel="icon" id="favicon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20261111-10">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261111-10">
   <meta name="theme-color" content="#7d1418">
-  <link rel="stylesheet" href="assets/styles.css?v=20261111-8">
+  <link rel="stylesheet" href="assets/styles.css?v=20261111-10">
 </head>
 <body>
   <!-- Login -->
   <div class="wrap hidden" id="login-view">
     <form class="card login" id="login-form">
-      <img class="login-logo" src="assets/logo.jpg?v=20261111-8" alt="Logótipo">
+      <img class="login-logo" src="assets/logo.jpg?v=20261111-10" alt="Logótipo">
       <h2>🎄 Backoffice da Rifa de Natal</h2>
       <p class="sub" style="margin:-4px 0 14px">Associação de Pais do Centro Social da Imaculada Conceição</p>
       <label for="login-email">Email</label>
@@ -33,7 +33,7 @@
     <header class="admin-hero">
       <div class="wrap">
         <div class="admin-brand">
-          <img class="admin-logo" id="admin-logo" src="assets/logo.jpg?v=20261111-8" alt="Logótipo">
+          <img class="admin-logo" id="admin-logo" src="assets/logo.jpg?v=20261111-10" alt="Logótipo">
           <div>
           <h1>🎄 Backoffice da Rifa</h1>
           <p class="admin-org" id="admin-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
@@ -142,7 +142,7 @@
           </div>
           <h3 class="cfg-h">Imagem da instituição (banner)</h3>
           <div class="logo-cfg">
-            <div class="logo-preview"><img id="c-logo-preview" src="assets/logo.jpg?v=20261111-8" alt="Pré-visualização"></div>
+            <div class="logo-preview"><img id="c-logo-preview" src="assets/logo.jpg?v=20261111-10" alt="Pré-visualização"></div>
             <div>
               <p class="sub" style="margin:0 0 8px" id="c-logo-state">A usar a imagem por omissão.</p>
               <div class="actions">
@@ -217,6 +217,20 @@
         </div>
         <div class="summary hidden" id="sale-summary"></div>
         <p class="msg" id="sale-msg"></p>
+        <div class="buyer-msg hidden" id="buyer-msg">
+          <div class="buyer-msg-head">
+            <strong>✅ <span id="buyer-msg-title">Venda registada</span></strong>
+            <button type="button" class="link" id="buyer-msg-close">fechar</button>
+          </div>
+          <label for="buyer-msg-text">Mensagem para o comprador (pode editar antes de enviar)</label>
+          <textarea id="buyer-msg-text" rows="12"></textarea>
+          <div class="actions" style="margin-top:8px">
+            <a class="btn wa" id="buyer-msg-wa" target="_blank" rel="noopener">Enviar por WhatsApp</a>
+            <a class="btn secondary" id="buyer-msg-mail">Enviar por email</a>
+            <button type="button" class="btn secondary" id="buyer-msg-copy">Copiar</button>
+          </div>
+          <p class="field-hint" id="buyer-msg-hint"></p>
+        </div>
         <div class="actions">
           <button class="btn" type="submit" id="sale-submit">Registar</button>
           <button class="btn secondary" type="button" id="clear-sel">Limpar</button>
@@ -301,6 +315,7 @@
           <button class="btn danger hidden" type="button" id="e-delete-order">Anular compra toda</button>
         </div>
         <div class="actions save-actions">
+          <button class="btn secondary" type="button" id="e-message" title="Mensagem de confirmação para o comprador">💬 Mensagem</button>
           <button class="btn secondary" type="button" id="e-cancel">Fechar</button>
           <button class="btn" type="button" id="e-save">Guardar</button>
         </div>
@@ -309,9 +324,9 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script src="config.js?v=20261111-8"></script>
-  <script src="assets/api.js?v=20261111-8"></script>
-  <script src="assets/share.js?v=20261111-8"></script>
-  <script src="assets/admin.js?v=20261111-8"></script>
+  <script src="config.js?v=20261111-10"></script>
+  <script src="assets/api.js?v=20261111-10"></script>
+  <script src="assets/share.js?v=20261111-10"></script>
+  <script src="assets/admin.js?v=20261111-10"></script>
 </body>
 </html>

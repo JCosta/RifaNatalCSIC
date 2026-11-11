@@ -195,6 +195,31 @@ input.locked:focus { outline: none; }
 .field-hint .link { font-weight: 700; }
 input[aria-invalid="true"] { border-color: var(--sold); background: #fff6f5; }
 
+/* Logótipo */
+.hero-logo { width: 124px; height: 124px; margin: 0 auto 12px; border-radius: 22px; background: #fff; padding: 8px; box-shadow: 0 0 0 4px rgba(243,210,122,.7), 0 8px 22px rgba(0,0,0,.25); overflow: hidden; }
+.hero-logo img { width: 100%; height: 100%; object-fit: contain; border-radius: 12px; display: block; }
+.admin-brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.admin-logo { width: 64px; height: 64px; border-radius: 14px; background: #fff; padding: 3px; object-fit: contain; box-shadow: 0 0 0 3px rgba(243,210,122,.6); flex: none; }
+.cfg-h { margin: 22px 0 10px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 1.02rem; color: var(--ink); }
+.logo-cfg { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+.logo-preview { width: 120px; height: 120px; border-radius: 18px; background: #fff; border: 1px solid var(--line); padding: 6px; flex: none; }
+.logo-preview img { width: 100%; height: 100%; object-fit: contain; border-radius: 10px; }
+.file-btn { cursor: pointer; }
+.login-logo { width: 96px; height: 96px; border-radius: 16px; object-fit: contain; display: block; margin: 0 auto 12px; border: 1px solid var(--line); padding: 4px; background: #fff; }
+
+/* Redes sociais (rodapé) */
+.social { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 10px; margin: 0 0 14px; }
+.social-link { display: inline-flex; align-items: center; gap: 7px; padding: 7px 12px; border-radius: 999px; background: #fff; border: 1px solid var(--line); color: var(--ink); text-decoration: none; font-size: .88rem; font-weight: 600; }
+.social-link svg { color: var(--sold); flex: none; }
+.social-link:hover { border-color: var(--gold); }
+
+.prize-block { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed var(--line); }
+.prize-block:last-child { border-bottom: 0; }
+.prize-detail { padding-left: 48px; padding-right: 128px; }
+.prize-detail input { font-size: .9rem; padding: 8px 12px; background: #fffdf8; }
+.prizes .p-text { display: flex; flex-direction: column; gap: 2px; }
+.prizes .p-detail { color: var(--muted); font-size: .88rem; line-height: 1.35; }
+
 /* Barra de seleção (aparece quando há números escolhidos na grelha) */
 .sel-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--free); color: #fff;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.18); }
@@ -247,6 +272,8 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 
   /* cabeçalho do backoffice */
   .admin-hero .wrap { padding-top: 14px; padding-bottom: 14px; }
   .admin-hero h1 { font-size: 1.6rem; }
+  .admin-logo { width: 52px; height: 52px; border-radius: 12px; }
+  .hero-logo { width: 96px; height: 96px; padding: 6px; }
   .admin-right { width: 100%; justify-content: stretch; }
   .user-chip { max-width: none; width: 100%; }
   .admin-hero .actions { width: 100%; }
@@ -280,6 +307,7 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 
   .draw-row .draw-info { grid-column: 1 / -1; }
   .results li { flex-wrap: wrap; gap: 6px 12px; }
   .results .r-pos { min-width: 0; }
+  .prize-detail { padding: 0 0 0 34px; }
   .contact-row { flex-wrap: wrap; }
   .contact-row .cn { flex: 1 1 100%; }
   .contact-row .cp { flex: 1; }

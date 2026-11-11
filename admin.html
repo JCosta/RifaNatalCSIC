@@ -6,12 +6,13 @@
   <meta name="robots" content="noindex">
   <title>Backoffice — Rifas</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
-  <link rel="stylesheet" href="assets/styles.css?v=20261111-2">
+  <link rel="stylesheet" href="assets/styles.css?v=20261111-5">
 </head>
 <body>
   <!-- Login -->
   <div class="wrap hidden" id="login-view">
     <form class="card login" id="login-form">
+      <img class="login-logo" src="assets/logo.jpg?v=20261111-5" alt="Logótipo">
       <h2>🎄 Backoffice da Rifa de Natal</h2>
       <p class="sub" style="margin:-4px 0 14px">Associação de Pais do Centro Social da Imaculada Conceição</p>
       <label for="login-email">Email</label>
@@ -27,10 +28,13 @@
   <div class="hidden" id="app-view">
     <header class="admin-hero">
       <div class="wrap">
-        <div>
+        <div class="admin-brand">
+          <img class="admin-logo" id="admin-logo" src="assets/logo.jpg?v=20261111-5" alt="Logótipo">
+          <div>
           <h1>🎄 Backoffice da Rifa</h1>
           <p class="admin-org" id="admin-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
           <a href="./" target="_blank">ver página pública ↗</a>
+          </div>
         </div>
         <div class="admin-right">
           <div class="user-chip" id="user-chip" title="">
@@ -132,6 +136,32 @@
             <label for="c-howto">Mensagem "Como comprar"</label>
             <input id="c-howto" maxlength="300" placeholder="Para comprar, contacte um elemento da comissão de pais.">
           </div>
+          <h3 class="cfg-h">Imagem da instituição (banner)</h3>
+          <div class="logo-cfg">
+            <div class="logo-preview"><img id="c-logo-preview" src="assets/logo.jpg?v=20261111-5" alt="Pré-visualização"></div>
+            <div>
+              <p class="sub" style="margin:0 0 8px" id="c-logo-state">A usar a imagem por omissão.</p>
+              <div class="actions">
+                <label class="btn secondary file-btn">Carregar imagem…<input type="file" id="c-logo-file" accept="image/png,image/jpeg,image/webp" hidden></label>
+                <button type="button" class="btn secondary" id="c-logo-reset">Usar imagem por omissão</button>
+              </div>
+              <p class="sub" style="margin:8px 0 0;font-size:.82rem">PNG, JPG ou WebP. A imagem é reduzida automaticamente; de preferência quadrada (logótipo ou foto da instituição).</p>
+            </div>
+          </div>
+
+          <h3 class="cfg-h">Redes sociais e contactos da instituição (rodapé)</h3>
+          <p class="sub" style="margin:-4px 0 10px;font-size:.88rem">Opcional. Só aparecem na página pública os campos preenchidos.</p>
+          <div class="row">
+            <div><label for="s-website">Site</label><input id="s-website" inputmode="url" placeholder="www.exemplo.pt"></div>
+            <div><label for="s-facebook">Facebook</label><input id="s-facebook" inputmode="url" placeholder="facebook.com/pagina"></div>
+            <div><label for="s-instagram">Instagram</label><input id="s-instagram" inputmode="url" placeholder="instagram.com/conta"></div>
+          </div>
+          <div class="row">
+            <div><label for="s-youtube">YouTube</label><input id="s-youtube" inputmode="url" placeholder="youtube.com/@canal"></div>
+            <div><label for="s-email">Email</label><input id="s-email" type="email" placeholder="geral@exemplo.pt"></div>
+            <div><label for="s-phone">Telefone</label><input id="s-phone" type="tel" placeholder="253 000 000"></div>
+          </div>
+
           <p class="msg" id="settings-msg"></p>
           <div class="actions"><button class="btn" type="submit">Guardar configuração</button></div>
         </form>
@@ -271,9 +301,9 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script src="config.js?v=20261111-2"></script>
-  <script src="assets/api.js?v=20261111-2"></script>
-  <script src="assets/share.js?v=20261111-2"></script>
-  <script src="assets/admin.js?v=20261111-2"></script>
+  <script src="config.js?v=20261111-5"></script>
+  <script src="assets/api.js?v=20261111-5"></script>
+  <script src="assets/share.js?v=20261111-5"></script>
+  <script src="assets/admin.js?v=20261111-5"></script>
 </body>
 </html>

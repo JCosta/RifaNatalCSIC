@@ -72,7 +72,10 @@
 
   // ---------- data ----------
   async function load() {
-    RifaAPI.getSettings().then(s => { $('admin-org').textContent = (s && s.organization) || ''; }).catch(() => {});
+    RifaAPI.getSettings().then(s => {
+      $('admin-org').textContent = (s && s.organization) || '';
+      $('admin-logo').src = (s && s.logo) || DEFAULT_LOGO;
+    }).catch(() => {});
     state = await api(RifaAPI.adminData());
     byNumber = new Map(state.sales.map(s => [s.number, s]));
     orders = new Map();
@@ -546,32 +549,84 @@
     const rows = $('contacts-list').querySelectorAll('.cn'); rows[rows.length - 1].focus();
   });
 
+  // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-5';
+  let logoValue = '';           // '' = imagem por omissão
+  function showLogo() {
+    $('c-logo-preview').src = logoValue || DEFAULT_LOGO;
+    $('c-logo-state').textContent = logoValue ? 'Imagem carregada (guarde a configuração para aplicar).' : 'A usar a imagem por omissão.';
+  }
+  function resizeImage(file, max) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+        ctx.drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(img.src);
+        let out = c.toDataURL('image/webp', 0.88);
+        if (!out.startsWith('data:image/webp')) out = c.toDataURL('image/jpeg', 0.88);
+        if (out.length > 340000) out = c.toDataURL('image/jpeg', 0.72);
+        resolve(out);
+      };
+      img.onerror = () => reject(new Error('Não foi possível ler a imagem.'));
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  $('c-logo-file').addEventListener('change', async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    hideMsg($('settings-msg'));
+    if (!/^image\/(png|jpeg|webp)$/.test(f.type)) { msg($('settings-msg'), 'Use uma imagem PNG, JPG ou WebP.', 'err'); return; }
+    try { logoValue = await resizeImage(f, 480); showLogo(); }
+    catch (err) { msg($('settings-msg'), err.message, 'err'); }
+  });
+  $('c-logo-reset').addEventListener('click', () => { logoValue = ''; showLogo(); $('c-logo-state').textContent = 'A usar a imagem por omissão (guarde a configuração para aplicar).'; });
+
+  const SOCIAL = ['website', 'facebook', 'instagram', 'youtube', 'email', 'phone'];
+
   // ---------- configuração ----------
-  function prizeInputs() { return [...$('prizes-list').querySelectorAll('input')]; }
+  // prémios: [{ name, detail }] — o descritivo é opcional
+  function prizeInputs() { return [...$('prizes-list').querySelectorAll('input.pn')]; }
+  function prizeValues() {
+    return [...$('prizes-list').querySelectorAll('.prize-block')].map(b => ({ name: b.querySelector('.pn').value, detail: b.querySelector('.pd').value }));
+  }
+  function toPrizeObjects(names, details) {
+    return (names || []).map((n, i) => (typeof n === 'object' && n) ? n : { name: n, detail: (details && details[i]) || '' });
+  }
   function renderPrizes(values) {
+    values = values.map(v => (typeof v === 'object' && v) ? v : { name: v || '', detail: '' });
     const frag = document.createDocumentFragment();
     values.forEach((v, i) => {
+      const block = document.createElement('div'); block.className = 'prize-block';
       const row = document.createElement('div'); row.className = 'prize-row';
       const ord = document.createElement('span'); ord.className = 'ord'; ord.textContent = (i + 1) + '.º';
-      const inp = document.createElement('input'); inp.value = v; inp.maxLength = 200; inp.placeholder = 'Descrição do prémio';
+      const inp = document.createElement('input'); inp.className = 'pn'; inp.value = v.name; inp.maxLength = 200; inp.placeholder = 'Nome do prémio (ex.: Cabaz de Natal)';
+      const det = document.createElement('input'); det.className = 'pd'; det.value = v.detail || ''; det.maxLength = 300;
+      det.placeholder = 'Descritivo (opcional) — ex.: cabaz com produtos regionais, oferta da Pastelaria X';
       const ctl = document.createElement('span'); ctl.className = 'ctl';
       const mk = (txt, title, fn, disabled) => {
         const b = document.createElement('button'); b.type = 'button'; b.className = 'icon-btn'; b.textContent = txt; b.title = title;
         b.disabled = !!disabled; b.addEventListener('click', fn); return b;
       };
-      const cur = () => prizeInputs().map(x => x.value);
+      const cur = () => prizeValues();
       ctl.append(
         mk('↑', 'Subir', () => { const a = cur(); [a[i - 1], a[i]] = [a[i], a[i - 1]]; renderPrizes(a); }, i === 0),
         mk('↓', 'Descer', () => { const a = cur(); [a[i + 1], a[i]] = [a[i], a[i + 1]]; renderPrizes(a); }, i === values.length - 1),
-        mk('✕', 'Remover', () => { const a = cur(); a.splice(i, 1); renderPrizes(a.length ? a : ['']); }),
+        mk('✕', 'Remover', () => { const a = cur(); a.splice(i, 1); renderPrizes(a.length ? a : [{ name: '', detail: '' }]); }),
       );
       row.append(ord, inp, ctl);
-      frag.appendChild(row);
+      const drow = document.createElement('div'); drow.className = 'prize-detail'; drow.append(det);
+      block.append(row, drow);
+      frag.appendChild(block);
     });
     $('prizes-list').replaceChildren(frag);
   }
   $('add-prize').addEventListener('click', () => {
-    renderPrizes([...prizeInputs().map(x => x.value), '']);
+    renderPrizes([...prizeValues(), { name: '', detail: '' }]);
     const all = prizeInputs(); all[all.length - 1].focus();
   });
 
@@ -588,9 +643,11 @@
     $('c-time').value = tt || '';
     $('c-location').value = s.draw_location || '';
     $('c-purpose').value = s.purpose || '';
-    renderPrizes(s.prizes && s.prizes.length ? s.prizes : ['']);
+    renderPrizes(s.prizes && s.prizes.length ? toPrizeObjects(s.prizes, s.prize_details) : [{ name: '', detail: '' }]);
     renderContacts(s.contacts && s.contacts.length ? s.contacts : [{}]);
     $('c-howto').value = s.how_to_buy || '';
+    logoValue = s.logo || ''; showLogo();
+    for (const k of SOCIAL) $('s-' + k).value = (s.social && s.social[k]) || '';
   }
 
   $('settings-form').addEventListener('submit', async (e) => {
@@ -605,14 +662,20 @@
         draw_date: $('c-date').value ? $('c-date').value + ($('c-time').value ? 'T' + $('c-time').value : '') : '',
         draw_location: $('c-location').value,
         purpose: $('c-purpose').value,
-        prizes: prizeInputs().map(x => x.value),
+        prizes: prizeValues().map(p => p.name),
+        prize_details: prizeValues().map(p => p.detail),
         contacts: contactRows(),
         how_to_buy: $('c-howto').value,
+        logo: logoValue,
+        social: Object.fromEntries(SOCIAL.map(k => [k, $('s-' + k).value])),
       }));
-      renderPrizes(r.prizes.length ? r.prizes : ['']);
+      renderPrizes(r.prizes.length ? toPrizeObjects(r.prizes, r.prize_details) : [{ name: '', detail: '' }]);
       renderContacts(r.contacts.length ? r.contacts : [{}]);
       $('admin-org').textContent = r.organization || '';
       $('c-total').value = r.total_tickets;
+      for (const k of SOCIAL) $('s-' + k).value = (r.social && r.social[k]) || '';
+      logoValue = r.logo || ''; showLogo();
+      $('admin-logo').src = logoValue || DEFAULT_LOGO;
       msg($('settings-msg'), 'Configuração guardada. A página pública já mostra os novos dados.', 'ok');
       load().catch(() => {});
     } catch (err) { msg($('settings-msg'), err.message, 'err'); }

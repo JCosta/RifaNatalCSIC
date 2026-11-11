@@ -108,6 +108,7 @@ window.RifaAPI = (() => {
 
     // ---- público ----
     publicTickets: () => rpc('public_tickets'),
+    publicLogo: () => rpc('public_logo'),
 
     // ---- autenticação: cada membro da comissão entra com o seu email e password ----
     defaultEmail: filled(cfg.ADMIN_EMAIL) ? cfg.ADMIN_EMAIL.trim() : '',

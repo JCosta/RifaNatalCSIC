@@ -56,7 +56,11 @@ window.RifaShare = (() => {
     if (d.price) L.push(`💶 ${euro(d.price)} por rifa`);
     if (d.prizes && d.prizes.length) {
       L.push('', '⭐ *Prémios*');
-      d.prizes.forEach((p, i) => L.push(`${i + 1}.º ${p}`));
+      d.prizes.forEach((p, i) => {
+        L.push(`${i + 1}.º ${p}`);
+        const det = (d.prize_details || [])[i];
+        if (det) L.push(`     _${det}_`);
+      });
     }
     L.push('');
     if (free.length) {

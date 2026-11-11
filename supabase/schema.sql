@@ -190,6 +190,18 @@ as $$
   select e ~ '^[a-z0-9._%+''-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$' and e !~ '\.\.';
 $$;
 
+-- Link de rede social / site: aceita "facebook.com/x" ou "https://..."; devolve '' se vazio, NULL se inválido
+create or replace function public._normalize_url(u text)
+returns text language plpgsql immutable
+as $$
+declare v text := btrim(coalesce(u, ''));
+begin
+  if v = '' then return ''; end if;
+  if v !~* '^https?://' then v := 'https://' || v; end if;
+  if v ~ '[[:space:]<>"]' or v !~* '^https?://[a-z0-9-]+(\.[a-z0-9-]+)+(:[0-9]+)?(/.*)?$' or length(v) > 300 then return null; end if;
+  return v;
+end $$;
+
 -- Valida os dados do comprador; devolve-os limpos
 create or replace function public._validate_buyer(
   p_buyer_name text, p_phone text, p_email text, p_seller text, p_notes text,
@@ -228,8 +240,11 @@ as $$
     'draw_date',     nullif(s.data ->> 'draw_date', ''),
     'draw_location', nullif(s.data ->> 'draw_location', ''),
     'prizes',        coalesce(s.data -> 'prizes', '[]'::jsonb),
+    'prize_details', coalesce(s.data -> 'prize_details', '[]'::jsonb),
     'contacts',      coalesce(s.data -> 'contacts', '[]'::jsonb),
     'how_to_buy',    coalesce(s.data ->> 'how_to_buy', ''),
+    'social',        coalesce(s.data -> 'social', '{}'::jsonb),
+    'has_logo',      coalesce(s.data ->> 'logo', '') <> '',
     'total',         public._total_tickets(),
     'price',         nullif((s.data ->> 'ticket_price')::numeric, 0),
     'sold',          coalesce((select jsonb_agg(number order by number) from public.sales), '[]'::jsonb),
@@ -238,6 +253,15 @@ as $$
                           then coalesce(s.data -> 'results', '[]'::jsonb) else '[]'::jsonb end
   )
   from public.settings s where s.id = 1;
+$$;
+
+-- Logótipo carregado no backoffice (data URL) — pedido uma vez, à parte, para não pesar na atualização periódica
+create or replace function public.public_logo()
+returns text
+language sql stable security definer
+set search_path = public
+as $$
+  select nullif(data ->> 'logo', '') from public.settings where id = 1;
 $$;
 
 -- ---------------------------------------------------------------------------
@@ -407,6 +431,11 @@ declare
   result jsonb;
   total  int;
   max_sold int;
+  social jsonb := '{}'::jsonb;
+  k      text;
+  sv     text;
+  logo   text;
+  prize_details jsonb;
 begin
   perform public._require_admin();
 
@@ -427,10 +456,16 @@ begin
   end if;
   if dd <> '' and dd !~ '^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$' then errs := array_append(errs, 'Data do sorteio inválida.'); end if;
 
-  select coalesce(jsonb_agg(v), '[]'::jsonb) into prizes from (
-    select public._clean(x, 200) as v
-    from jsonb_array_elements_text(case when jsonb_typeof(p_data -> 'prizes') = 'array' then p_data -> 'prizes' else '[]'::jsonb end) x
-    limit 50) t where v <> '';
+  -- prémios: nomes + descritivo opcional (mesma ordem); prémios sem nome são ignorados
+  select coalesce(jsonb_agg(nm order by ord), '[]'::jsonb), coalesce(jsonb_agg(dt order by ord), '[]'::jsonb)
+    into prizes, prize_details
+  from (
+    select ord, public._clean(x, 200) as nm,
+           public._clean(case when jsonb_typeof(p_data -> 'prize_details') = 'array'
+                              then p_data -> 'prize_details' ->> (ord::int - 1) end, 300) as dt
+    from jsonb_array_elements_text(case when jsonb_typeof(p_data -> 'prizes') = 'array' then p_data -> 'prizes' else '[]'::jsonb end)
+         with ordinality as t(x, ord)
+    limit 50) t where nm <> '';
 
   select coalesce(jsonb_agg(jsonb_build_object('name', n, 'phone', p)), '[]'::jsonb) into contacts from (
     select public._clean(x ->> 'name', 80) as n,
@@ -443,6 +478,33 @@ begin
       errs := array_append(errs, format('Telefone inválido: %s (ex.: 912 345 678 ou +55 11 98765-4321).', substr(c ->> 'phone', 2)));
     end if;
   end loop;
+
+  -- redes sociais / contactos da instituição (rodapé)
+  if jsonb_typeof(p_data -> 'social') = 'object' then
+    foreach k in array array['website', 'facebook', 'instagram', 'youtube'] loop
+      sv := public._normalize_url(public._clean(p_data -> 'social' ->> k, 300));
+      if sv is null then errs := array_append(errs, format('Link inválido em %s (ex.: facebook.com/pagina).', initcap(k)));
+      elsif sv <> '' then social := social || jsonb_build_object(k, sv); end if;
+    end loop;
+    sv := lower(public._clean(p_data -> 'social' ->> 'email', 160));
+    if sv <> '' and not public._valid_email(sv) then errs := array_append(errs, 'Email da instituição inválido.');
+    elsif sv <> '' then social := social || jsonb_build_object('email', sv); end if;
+    sv := public._normalize_phone(public._clean(p_data -> 'social' ->> 'phone', 40));
+    if sv is null then errs := array_append(errs, 'Telefone da instituição inválido.');
+    elsif sv <> '' then social := social || jsonb_build_object('phone', sv); end if;
+  else
+    social := coalesce((select data -> 'social' from public.settings where id = 1), '{}'::jsonb);
+  end if;
+
+  -- logótipo: data URL de imagem (png/jpeg/webp) até ~350 KB; ausente = manter, '' = retirar
+  if p_data ? 'logo' then
+    logo := coalesce(p_data ->> 'logo', '');
+    if logo <> '' and (logo !~ '^data:image/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$' or length(logo) > 350000) then
+      errs := array_append(errs, 'Imagem inválida ou demasiado grande (use PNG, JPG ou WebP).');
+    end if;
+  else
+    logo := coalesce((select data ->> 'logo' from public.settings where id = 1), '');
+  end if;
 
   if cardinality(errs) > 0 then
     raise exception '%', (select string_agg(distinct e, ' ') from unnest(errs) e) using errcode = '22023';
@@ -457,11 +519,14 @@ begin
     'draw_location', public._clean(p_data ->> 'draw_location', 200),
     'purpose',       left(btrim(coalesce(p_data ->> 'purpose', '')), 2000),
     'prizes',        prizes,
+    'prize_details', prize_details,
     'contacts',      contacts,
-    'how_to_buy',    public._clean(p_data ->> 'how_to_buy', 300)
+    'how_to_buy',    public._clean(p_data ->> 'how_to_buy', 300),
+    'social',        social,
+    'logo',          logo
   );
   update public.settings set data = result, updated_at = now() where id = 1;
-  insert into public.audit_log (actor, action, details) values (auth.jwt() ->> 'email', 'configuração', left(result::text, 1000));
+  insert into public.audit_log (actor, action, details) values (auth.jwt() ->> 'email', 'configuração', left((result - 'logo')::text, 1000));
   return result;
 end $$;
 
@@ -525,6 +590,7 @@ end $$;
 -- ---------------------------------------------------------------------------
 revoke execute on all functions in schema public from public, anon, authenticated;
 grant  execute on function public.public_tickets() to anon, authenticated;
+grant  execute on function public.public_logo() to anon, authenticated;
 grant  execute on function public.is_admin() to authenticated;
 grant  execute on function public.admin_data() to authenticated;
 grant  execute on function public.create_sale(int[], text, text, text, text, text, boolean) to authenticated;

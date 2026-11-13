@@ -6,17 +6,17 @@
   <meta name="robots" content="noindex">
   <title>Backoffice — Rifas</title>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Nunito:wght@400;600;700;800&display=swap">
-    <link rel="icon" href="favicon.ico?v=20261111-12" sizes="any">
-  <link rel="icon" id="favicon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20261111-12">
-  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261111-12">
+    <link rel="icon" href="favicon.ico?v=20261113-2" sizes="any">
+  <link rel="icon" id="favicon" type="image/png" sizes="32x32" href="assets/favicon-32.png?v=20261113-2">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png?v=20261113-2">
   <meta name="theme-color" content="#7d1418">
-  <link rel="stylesheet" href="assets/styles.css?v=20261111-12">
+  <link rel="stylesheet" href="assets/styles.css?v=20261113-2">
 </head>
 <body>
   <!-- Login -->
   <div class="wrap hidden" id="login-view">
     <form class="card login" id="login-form">
-      <img class="login-logo" src="assets/logo.jpg?v=20261111-12" alt="Logótipo">
+      <img class="login-logo" src="assets/logo.jpg?v=20261113-2" alt="Logótipo">
       <h2>🎄 Backoffice da Rifa de Natal</h2>
       <p class="sub" style="margin:-4px 0 14px">Associação de Pais do Centro Social da Imaculada Conceição</p>
       <label for="login-email">Email</label>
@@ -33,7 +33,7 @@
     <header class="admin-hero">
       <div class="wrap">
         <div class="admin-brand">
-          <img class="admin-logo" id="admin-logo" src="assets/logo.jpg?v=20261111-12" alt="Logótipo">
+          <img class="admin-logo" id="admin-logo" src="assets/logo.jpg?v=20261113-2" alt="Logótipo">
           <div>
           <h1>🎄 Backoffice da Rifa</h1>
           <p class="admin-org" id="admin-org">Associação de Pais do Centro Social da Imaculada Conceição</p>
@@ -78,6 +78,16 @@
 
     <!-- ===== Partilhar ===== -->
     <div id="share-tab" class="hidden">
+      <section class="card">
+        <div class="toolbar"><h2 style="margin:0">📈 Visitas à página pública</h2><span class="sub" id="visits-updated"></span></div>
+        <div class="stats stats-3" style="margin:8px 0 14px">
+          <div class="stat live"><div class="k"><span class="dot"></span>A ver agora</div><div class="v" id="v-online">–</div></div>
+          <div class="stat"><div class="k">Visitantes hoje</div><div class="v" id="v-today">–</div></div>
+          <div class="stat"><div class="k">Visitantes no total</div><div class="v" id="v-total">–</div></div>
+        </div>
+        <div class="visits-chart" id="visits-chart" role="img" aria-label="Visitantes por dia nos últimos 14 dias"></div>
+        <p class="sub" style="margin:10px 0 0;font-size:.82rem">Visitantes únicos por dia (últimos 14 dias). Valores aproximados: o mesmo pai no telemóvel e no computador conta como dois. Não é guardado nenhum dado pessoal.</p>
+      </section>
       <section class="card">
         <h2>📣 Enviar números disponíveis</h2>
         <p class="sub" style="margin:-4px 0 12px">Texto pronto a enviar a possíveis compradores. Só contém informação pública (números livres, prémios, contactos da comissão) — nunca dados de compradores. Pode editá-lo antes de enviar.</p>
@@ -142,7 +152,7 @@
           </div>
           <h3 class="cfg-h">Imagem da instituição (banner)</h3>
           <div class="logo-cfg">
-            <div class="logo-preview"><img id="c-logo-preview" src="assets/logo.jpg?v=20261111-12" alt="Pré-visualização"></div>
+            <div class="logo-preview"><img id="c-logo-preview" src="assets/logo.jpg?v=20261113-2" alt="Pré-visualização"></div>
             <div>
               <p class="sub" style="margin:0 0 8px" id="c-logo-state">A usar a imagem por omissão.</p>
               <div class="actions">
@@ -183,6 +193,7 @@
       <div class="stat sold"><div class="k">Vendidas</div><div class="v" id="s-sold">–</div></div>
       <div class="stat"><div class="k">Por pagar</div><div class="v" id="s-unpaid">–</div></div>
       <div class="stat hidden" id="money-box"><div class="k">Valor recebido</div><div class="v" id="s-money">–</div></div>
+      <div class="stat live" title="Pessoas com a página pública aberta no último minuto"><div class="k"><span class="dot"></span>A ver agora</div><div class="v" id="s-online">–</div></div>
     </div>
 
     <section class="card" id="sale-card">
@@ -342,9 +353,9 @@
   </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.0/dist/umd/supabase.js"></script>
-  <script src="config.js?v=20261111-12"></script>
-  <script src="assets/api.js?v=20261111-12"></script>
-  <script src="assets/share.js?v=20261111-12"></script>
-  <script src="assets/admin.js?v=20261111-12"></script>
+  <script src="config.js?v=20261113-2"></script>
+  <script src="assets/api.js?v=20261113-2"></script>
+  <script src="assets/share.js?v=20261113-2"></script>
+  <script src="assets/admin.js?v=20261113-2"></script>
 </body>
 </html>

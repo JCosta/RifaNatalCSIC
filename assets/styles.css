@@ -239,6 +239,21 @@ select { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; 
 @media (min-width: 721px) and (max-width: 1050px) { .filters { grid-template-columns: 1fr 1fr 1fr; } .filters .f-search { grid-column: 1 / -1; } }
 td.date { white-space: nowrap; color: var(--muted); font-size: .88rem; font-variant-numeric: tabular-nums; }
 
+/* Visitas */
+.stat.live .k { display: flex; align-items: center; gap: 6px; }
+.stat.live .dot { width: 8px; height: 8px; border-radius: 50%; background: #22a35a; box-shadow: 0 0 0 0 rgba(34,163,90,.6); animation: pulse 2s infinite; }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(34,163,90,.55); } 70% { box-shadow: 0 0 0 8px rgba(34,163,90,0); } 100% { box-shadow: 0 0 0 0 rgba(34,163,90,0); } }
+@media (prefers-reduced-motion: reduce) { .stat.live .dot { animation: none; } }
+.stat.live .v { color: var(--free); }
+.visits-chart { display: grid; grid-template-columns: repeat(14, 1fr); gap: 6px; height: 170px; align-items: end; padding: 0 2px; border-bottom: 1px solid var(--line); }
+.vc-col { height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px; min-width: 0; }
+.vc-bar { width: 100%; max-width: 34px; background: var(--sold); border-radius: 5px 5px 0 0; opacity: .85; }
+.vc-col:last-child .vc-bar { background: var(--gold); opacity: 1; }
+.vc-val { font-size: .75rem; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.vc-lab { font-size: .7rem; color: var(--muted); white-space: nowrap; margin-bottom: -20px; transform: translateY(2px); }
+.visits-chart { margin-bottom: 22px; }
+.vc-short { display: none; }
+
 /* Barra de seleção (aparece quando há números escolhidos na grelha) */
 .sel-bar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--free); color: #fff;
   padding: 10px 16px calc(10px + env(safe-area-inset-bottom)); box-shadow: 0 -6px 20px rgba(0,0,0,.18); }
@@ -333,6 +348,15 @@ footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 
   .filters .f-clear, .filters .f-sort { grid-column: 1 / -1; }
   .filters .f-clear .btn { width: 100%; }
   table.cards td.date { font-size: .85rem; }
+  .visits-chart { gap: 3px; height: 140px; }
+  .vc-lab { font-size: .68rem; }
+  .vc-full { display: none; }
+  .vc-short { display: inline; }
+  .stats.stats-3 { grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .stats.stats-3 .stat { padding: 10px; }
+  .stats.stats-3 .k { font-size: .72rem; }
+  .stats.stats-3 .v { font-size: 1.25rem; }
+  .vc-val { font-size: .65rem; }
   .contact-row { flex-wrap: wrap; }
   .contact-row .cn { flex: 1 1 100%; }
   .contact-row .cp { flex: 1; }

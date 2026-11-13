@@ -240,7 +240,24 @@
       $('err').classList.add('show');
     }
   }
+  // ---------- presença: conta quem está a ver a página (sem dados pessoais) ----------
+  // Um código aleatório fica guardado neste browser só para não contar a mesma pessoa duas vezes.
+  function visitorId() {
+    const make = () => (crypto.randomUUID ? crypto.randomUUID() : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join(''));
+    try {
+      let id = localStorage.getItem('rifa-visitor');
+      if (!id || !/^[a-zA-Z0-9-]{16,64}$/.test(id)) { id = make(); localStorage.setItem('rifa-visitor', id); }
+      return id;
+    } catch (_) { return window.__rifaVisitor || (window.__rifaVisitor = make()); }
+  }
+  function heartbeat() {
+    if (document.hidden || !RifaAPI.configured) return;   // separador escondido não conta como "a ver"
+    RifaAPI.heartbeat(visitorId()).catch(() => {});
+  }
+
   load();
+  heartbeat();
   setInterval(load, 30000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) load(); });
+  setInterval(heartbeat, 30000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); heartbeat(); } });
 })();

@@ -50,6 +50,19 @@ create table if not exists public.audit_log (
   details  text not null default ''
 );
 
+-- Estatísticas da página pública (sem dados pessoais: só um código aleatório gerado no browser)
+create table if not exists public.visits (
+  day        date not null,                       -- dia (hora de Lisboa)
+  visitor    text not null,                       -- código aleatório do browser
+  first_seen timestamptz not null default now(),
+  primary key (day, visitor)
+);
+create table if not exists public.online_now (
+  visitor    text primary key,
+  last_seen  timestamptz not null default now()
+);
+create index if not exists online_now_seen_idx on public.online_now(last_seen);
+
 -- Configuração inicial (só é inserida se ainda não existir)
 insert into public.settings (id, data) values (1, jsonb_build_object(
   'organization',  'Associação de Pais do Centro Social da Imaculada Conceição',
@@ -71,8 +84,11 @@ alter table public.admins    enable row level security;
 alter table public.settings  enable row level security;
 alter table public.sales     enable row level security;
 alter table public.audit_log enable row level security;
+alter table public.visits    enable row level security;
+alter table public.online_now enable row level security;
 
-revoke all on public.admins, public.settings, public.sales, public.audit_log from anon;
+revoke all on public.admins, public.settings, public.sales, public.audit_log, public.visits, public.online_now from anon;
+revoke all on public.visits, public.online_now from authenticated;
 revoke all on sequence public.audit_log_id_seq from anon;
 
 create or replace function public.is_admin()
@@ -264,6 +280,21 @@ as $$
   select nullif(data ->> 'logo', '') from public.settings where id = 1;
 $$;
 
+-- Sinal de presença da página pública (a cada ~30 s com a página visível)
+create or replace function public.public_heartbeat(p_visitor text)
+returns void
+language plpgsql volatile security definer
+set search_path = public
+as $$
+begin
+  if p_visitor is null or p_visitor !~ '^[a-zA-Z0-9-]{16,64}$' then return; end if;
+  insert into public.visits (day, visitor) values ((now() at time zone 'Europe/Lisbon')::date, p_visitor)
+    on conflict do nothing;
+  insert into public.online_now (visitor, last_seen) values (p_visitor, now())
+    on conflict (visitor) do update set last_seen = excluded.last_seen;
+  delete from public.online_now where last_seen < now() - interval '15 minutes';
+end $$;
+
 -- ---------------------------------------------------------------------------
 -- API do backoffice (apenas administradores)
 -- ---------------------------------------------------------------------------
@@ -404,6 +435,25 @@ begin
   perform public._require_admin();
   select * into a from public.admins where lower(email) = lower(auth.jwt() ->> 'email');
   return jsonb_build_object('email', a.email, 'name', nullif(btrim(coalesce(a.name, '')), ''));
+end $$;
+
+-- Estatísticas de visitas: a ver agora, hoje, total e últimos 14 dias
+create or replace function public.admin_stats()
+returns jsonb
+language plpgsql stable security definer
+set search_path = public
+as $$
+declare today date := (now() at time zone 'Europe/Lisbon')::date;
+begin
+  perform public._require_admin();
+  return jsonb_build_object(
+    'online', (select count(*) from public.online_now where last_seen > now() - interval '75 seconds'),
+    'today',  (select count(*) from public.visits where day = today),
+    'total',  (select count(distinct visitor) from public.visits),
+    'days',   (select coalesce(jsonb_agg(jsonb_build_object('day', d::date, 'visitors', coalesce(v.n, 0)) order by d), '[]'::jsonb)
+               from generate_series(today - 13, today, interval '1 day') d
+               left join (select day, count(*) n from public.visits group by day) v on v.day = d::date)
+  );
 end $$;
 
 create or replace function public.get_settings()
@@ -593,6 +643,8 @@ end $$;
 revoke execute on all functions in schema public from public, anon, authenticated;
 grant  execute on function public.public_tickets() to anon, authenticated;
 grant  execute on function public.public_logo() to anon, authenticated;
+grant  execute on function public.public_heartbeat(text) to anon, authenticated;
+grant  execute on function public.admin_stats() to authenticated;
 grant  execute on function public.is_admin() to authenticated;
 grant  execute on function public.admin_data() to authenticated;
 grant  execute on function public.create_sale(int[], text, text, text, text, text, boolean) to authenticated;

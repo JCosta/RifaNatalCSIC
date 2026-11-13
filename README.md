@@ -60,6 +60,13 @@ O telefone é validado e normalizado no browser e na base de dados (mesma regra)
 
 O email tem validação de formato e sugestões para gralhas comuns (`gmai.com` → `gmail.com`). Cada venda precisa de pelo menos um contacto.
 
+## Estatísticas de visitas
+
+- **A ver agora** (cartão nas Vendas e na aba Partilhar): browsers com a página pública aberta e visível no último minuto. A página envia um sinal a cada 30 s (`public_heartbeat`); separadores escondidos e o backoffice não contam.
+- **Visitantes hoje / no total / últimos 14 dias** (aba Partilhar): visitantes únicos por dia, hora de Lisboa.
+- Sem dados pessoais: só um código aleatório guardado no browser (`localStorage`), para não contar a mesma pessoa duas vezes. Nada de IP, nome ou cookies de terceiros. Só os administradores leem as estatísticas.
+- Para apagar o histórico: `delete from public.visits; delete from public.online_now;`
+
 ## Segurança e privacidade
 
 - Toda a lógica corre em funções SQL no Supabase (`supabase/schema.sql`), com **Row Level Security** em todas as tabelas.

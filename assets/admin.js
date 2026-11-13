@@ -50,7 +50,7 @@
     // quem vende é, por omissão, quem está autenticado
     setSeller();
   }
-  function showApp() { $('login-view').classList.add('hidden'); $('app-view').classList.remove('hidden'); loadMe(); }
+  function showApp() { $('login-view').classList.add('hidden'); $('app-view').classList.remove('hidden'); loadMe(); loadStats(); }
 
   $('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -569,7 +569,7 @@
     document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === t));
     for (const id of ['sales-tab', 'share-tab', 'draw-tab', 'settings-tab']) $(id).classList.toggle('hidden', id !== t.dataset.tab);
     if (t.dataset.tab === 'draw-tab') loadDraw().catch(err => msg($('draw-msg'), err.message, 'err'));
-    if (t.dataset.tab === 'share-tab') refreshShare();
+    if (t.dataset.tab === 'share-tab') { refreshShare(); loadStats(); }
     updateSelBar();
     if (t.dataset.tab === 'settings-tab') loadSettings().catch(err => msg($('settings-msg'), err.message, 'err'));
   }));
@@ -625,6 +625,34 @@
     } catch (err) { msg($('draw-msg'), err.message, 'err'); }
   });
 
+  // ---------- estatísticas de visitas ----------
+  let stats = null;
+  async function loadStats() {
+    try { stats = await RifaAPI.adminStats(); } catch (_) { return; }
+    $('s-online').textContent = stats.online;
+    $('v-online').textContent = stats.online;
+    $('v-today').textContent = stats.today;
+    $('v-total').textContent = stats.total;
+    $('visits-updated').textContent = 'atualizado às ' + new Date().toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const days = stats.days || [];
+    const max = Math.max(1, ...days.map(d => d.visitors));
+    const frag = document.createDocumentFragment();
+    for (const d of days) {
+      const col = document.createElement('div'); col.className = 'vc-col';
+      const dt = new Date(d.day + 'T12:00:00');
+      col.title = `${dt.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' })}: ${d.visitors} visitante${d.visitors === 1 ? '' : 's'}`;
+      const val = document.createElement('span'); val.className = 'vc-val'; val.textContent = d.visitors || '';
+      const bar = document.createElement('div'); bar.className = 'vc-bar'; bar.style.height = Math.max(d.visitors ? 4 : 0, Math.round(d.visitors / max * 100)) + '%';
+      const lab = document.createElement('span'); lab.className = 'vc-lab';
+      const full = document.createElement('span'); full.className = 'vc-full'; full.textContent = dt.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' });
+      const short = document.createElement('span'); short.className = 'vc-short'; short.textContent = dt.getDate();
+      lab.append(full, short);
+      col.append(val, bar, lab); frag.appendChild(col);
+    }
+    $('visits-chart').replaceChildren(frag);
+  }
+  setInterval(() => { if (!document.hidden && !$('app-view').classList.contains('hidden')) loadStats(); }, 20000);
+
   // ---------- partilhar ----------
   async function refreshShare() {
     $('public-link').value = publicUrl();
@@ -663,7 +691,7 @@
   });
 
   // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
-  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261111-12';
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261113-2';
   let logoValue = '';           // '' = imagem por omissão
   function showLogo() {
     $('c-logo-preview').src = logoValue || DEFAULT_LOGO;

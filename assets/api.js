@@ -129,6 +129,7 @@ window.RifaAPI = (() => {
     // ---- público ----
     publicTickets: () => rpc('public_tickets'),
     publicLogo: () => rpc('public_logo'),
+    heartbeat: (visitor) => rpc('public_heartbeat', { p_visitor: visitor }),
 
     // ---- autenticação: cada membro da comissão entra com o seu email e password ----
     defaultEmail: filled(cfg.ADMIN_EMAIL) ? cfg.ADMIN_EMAIL.trim() : '',
@@ -162,6 +163,7 @@ window.RifaAPI = (() => {
     // ---- backoffice ----
     adminData: () => rpc('admin_data'),
     whoami: () => rpc('whoami'),
+    adminStats: () => rpc('admin_stats'),
     createSale: (s) => rpc('create_sale', {
       p_numbers: s.numbers, p_buyer_name: s.buyer_name, p_seller: s.seller,
       p_phone: s.phone || '', p_email: s.email || '', p_notes: s.notes || '', p_paid: s.paid !== false,

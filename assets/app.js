@@ -2,7 +2,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const grid = $('grid');
-  const euro = (v) => v.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+  const euro = (v) => Number(v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' 🎁'; // sem símbolo de moeda (requisito legal)
 
   // neve (desligada se o utilizador preferir menos movimento)
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

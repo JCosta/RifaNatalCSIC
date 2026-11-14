@@ -2,7 +2,7 @@
 /* Gera o texto com os números disponíveis para enviar a possíveis compradores
    (WhatsApp, SMS, email…). Usa apenas dados públicos: nunca inclui compradores. */
 window.RifaShare = (() => {
-  const euro = (v) => v.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+  const euro = (v) => Number(v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' 🎁'; // sem símbolo de moeda (requisito legal)
 
   // [1,2,3,5,7,8,9] -> "1 a 3, 5, 7 a 9"
   function compress(nums) {
@@ -53,7 +53,7 @@ window.RifaShare = (() => {
     if (d.purpose) L.push(`🎁 ${d.purpose}`);
     const dt = drawText(d.draw_date);
     if (dt) L.push(`📅 Sorteio: ${dt}${d.draw_location ? ' — ' + d.draw_location : ''}`);
-    if (d.price) L.push(`💶 ${euro(d.price)} por rifa`);
+    if (d.price) L.push(`🎄 ${euro(d.price)} por rifa`);
     if (d.prizes && d.prizes.length) {
       L.push('', '⭐ *Prémios*');
       d.prizes.forEach((p, i) => {

@@ -1,7 +1,7 @@
 'use strict';
 (() => {
   const $ = (id) => document.getElementById(id);
-  const euro = (v) => v.toLocaleString('pt-PT', { style: 'currency', currency: 'EUR' });
+  const euro = (v) => Number(v).toLocaleString('pt-PT', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' 🎁'; // sem símbolo de moeda (requisito legal)
   let state = { total: 250, price: null, sales: [], sellers: [] };
   let byNumber = new Map();
   const selected = new Set();
@@ -289,7 +289,7 @@
     L.push('');
     L.push(`${n === 1 ? 'Fica registado o teu número' : `Ficam registados os teus ${n} números`} da ${cfg.event_name || 'Rifa de Natal'}${cfg.organization ? ' — ' + cfg.organization : ''}:`);
     L.push(`🎟️ N.º ${nums.join(', ')}`);
-    if (state.price) L.push(`💶 Total: ${euro(n * state.price)}${p.paid ? ' (pago)' : ' (a pagar)'}`);
+    if (state.price) L.push(`🎄 Total: ${euro(n * state.price)}${p.paid ? ' (pago)' : ' (a pagar)'}`);
     const dd = drawDateText();
     if (dd) L.push(`📅 Sorteio: ${dd}${cfg.draw_location ? ' — ' + cfg.draw_location : ''}`);
     L.push('');
@@ -691,7 +691,7 @@
   });
 
   // ---------- logótipo (carregado e reduzido no browser; guardado na configuração) ----------
-  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261113-2';
+  const DEFAULT_LOGO = 'assets/logo.jpg?v=20261114-1';
   let logoValue = '';           // '' = imagem por omissão
   function showLogo() {
     $('c-logo-preview').src = logoValue || DEFAULT_LOGO;
